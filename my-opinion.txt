@@ -1,0 +1,155 @@
+Tao chọn:
+
+C — OANDA Gold Bot
+
+Không phải vì tao nghĩ Gold dễ kiếm tiền hơn BTC.
+
+Mà vì giá trị thông tin trên mỗi giờ bỏ ra cao nhất.
+
+Nhìn lại những gì mày đã có:
+
+Crypto research
+
+Đã biết:
+
+Indicator stack      ❌
+Breakout             ❌
+ADX                  ❌
+Retest               ❌
+Regime classifier    ❌
+Long-only            ❌
+Short mirror         ❌
+
+Microstructure:
+
+Funding data thiếu
+OI data thiếu
+
+=> Không thể tiến thêm mà không đầu tư data engineering.
+
+Vấn đề của Option A
+
+Nếu hôm nay bắt đầu crawl:
+
+Funding
+OI
+
+thì kết quả đầu tiên:
+
+Tháng 9-12/2026
+
+mới có.
+
+Đó là một khoản đầu tư rất lớn.
+
+Trong khi chưa có bất kỳ bằng chứng nào:
+
+H3 có edge
+H9 có edge
+Vấn đề của "nghỉ project"
+
+Tao không nghỉ.
+
+Tao đóng băng.
+
+Khác nhau.
+
+Tao sẽ lưu:
+
+research/
+├── v1_breakout.md
+├── v2_no_volume.md
+├── v3_adx.md
+├── v4_retest.md
+├── v5_regime.md
+├── conclusions.md
+
+và coi nó là:
+
+Research Round #1
+
+không phải thất bại.
+
+Vì sao tao chọn Gold
+
+Mày đang thiếu một thứ rất quan trọng:
+
+Kiểm tra xem vấn đề nằm ở BTC hay nằm ở cách tiếp cận.
+
+Hiện tại tất cả nghiên cứu đều trên:
+
+BTC Futures
+
+Một asset.
+
+Một market.
+
+Một cấu trúc.
+
+Nếu lấy đúng framework:
+
+Backtest
+Forward test
+Risk management
+
+đem sang Gold:
+
+XAUUSD
+
+thì mày sẽ học được:
+
+Case 1
+
+Gold cũng chết
+
+=> vấn đề nằm ở framework.
+
+Case 2
+
+Gold tốt hơn đáng kể
+
+=> vấn đề nằm ở market structure crypto.
+
+Thông tin này cực kỳ giá trị.
+
+Điều tao sẽ làm thực tế
+Nhánh chính
+OANDA Gold Bot
+Demo account
+Forward test
+
+2–4 tuần.
+
+Nhánh nền
+
+Song song:
+
+Crawler Funding
+Crawler OI
+
+chạy nền.
+
+Không phân tích.
+
+Không backtest.
+
+Chỉ lưu dữ liệu.
+
+Đến cuối năm:
+
+Funding history
+OI history
+
+đã tự tích lũy.
+
+Lúc đó quay lại H9/H3.
+
+Nếu là tao, quyết định hôm nay sẽ là:
+
+70% thời gian → Gold Bot
+20% thời gian → Data Collection
+10% thời gian → Documentation
+
+Vì hiện tại nút thắt không còn là ý tưởng hay code nữa.
+
+Nút thắt là thiếu dữ liệu để kiểm định hypothesis microstructure, trong khi Gold Bot cho mày một môi trường mới để tiếp tục học về execution, risk và live trading ngay lập tức.
