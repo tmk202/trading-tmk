@@ -1,0 +1,90 @@
+/Users/alice/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+=== HYPERLIQUID REALTIME TRACKER ===
+Wallets:     2
+Source:      /Users/alice/Documents/nnt/CODE/trading-tmk/data/copy_trade/hyperliquid_tracking_universe.csv
+Interval:    3.0s
+State:       /Users/alice/Documents/nnt/CODE/trading-tmk/data/copy_trade/hyperliquid_tracker_state.json
+Positions:   /Users/alice/Documents/nnt/CODE/trading-tmk/data/copy_trade/hyperliquid_position_events.csv
+Fills:       /Users/alice/Documents/nnt/CODE/trading-tmk/data/copy_trade/hyperliquid_fill_events.csv
+
+[2026-06-11T10:18:28+00:00] 0x001a1a5e OPEN     SHORT BTC      0->-9.607 uPnL=63120.91 liq=116109.29
+[2026-06-11T10:18:28+00:00] 0x001a1a5e OPEN     SHORT DOGE     0->-1.013e+06 uPnL=8495.29 liq=0.57
+[2026-06-11T10:18:28+00:00] 0x001a1a5e OPEN     SHORT ETH      0->-1007.33 uPnL=369985.81 liq=2159.39
+[2026-06-11T10:18:28+00:00] 0x001a1a5e OPEN     SHORT HYPE     0->-1992.4 uPnL=-61178.04 liq=303.61
+[2026-06-11T10:18:28+00:00] 0x001a1a5e OPEN     SHORT SOL      0->-3750 uPnL=467183.98 liq=200.18
+[2026-06-11T10:18:39+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:18:48+00:00] hl_error wallet=0x4b4bdd73 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:18:54+00:00] hl_error wallet=0x001a1a5e Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:18:54+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:19:02+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:19:07+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:19:14+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:19:23+00:00] hl_error wallet=0x4b4bdd73 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:19:30+00:00] hl_error wallet=0x001a1a5e Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:19:30+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:19:40+00:00] hl_error wallet=0x4b4bdd73 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:19:47+00:00] hl_error wallet=0x001a1a5e Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:19:47+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:19:56+00:00] hl_error wallet=0x4b4bdd73 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:20:00+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:20:06+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:20:17+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:20:27+00:00] hl_error wallet=0x4b4bdd73 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:20:33+00:00] hl_error wallet=0x001a1a5e Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:20:33+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:20:43+00:00] hl_error wallet=0x4b4bdd73 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:20:49+00:00] hl_error wallet=0x001a1a5e Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:20:49+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:20:59+00:00] hl_error wallet=0x4b4bdd73 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:21:01+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:21:06+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:21:11+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:21:17+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:21:28+00:00] hl_error wallet=0x001a1a5e Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:21:28+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:21:37+00:00] hl_error wallet=0x4b4bdd73 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:21:44+00:00] hl_error wallet=0x001a1a5e Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:21:44+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:21:54+00:00] hl_error wallet=0x4b4bdd73 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:22:00+00:00] hl_error wallet=0x001a1a5e Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:22:00+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:22:05+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:22:11+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:22:20+00:00] hl_error wallet=0x4b4bdd73 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:22:27+00:00] hl_error wallet=0x001a1a5e Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:22:27+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:22:36+00:00] hl_error wallet=0x4b4bdd73 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:22:43+00:00] hl_error wallet=0x001a1a5e Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:22:43+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:22:52+00:00] hl_error wallet=0x4b4bdd73 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:22:59+00:00] hl_error wallet=0x001a1a5e Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:22:59+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:23:04+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:23:10+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:23:21+00:00] hl_error wallet=0x001a1a5e Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:23:21+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:23:32+00:00] hl_error wallet=0x4b4bdd73 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:23:38+00:00] hl_error wallet=0x001a1a5e Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:23:38+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:23:48+00:00] hl_error wallet=0x4b4bdd73 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:23:54+00:00] hl_error wallet=0x001a1a5e Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:23:54+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:24:03+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:24:10+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:24:20+00:00] hl_error wallet=0x4b4bdd73 Hyperliquid API failed for userFills: None
+[2026-06-11T10:24:27+00:00] hl_error wallet=0x001a1a5e Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:24:27+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:24:38+00:00] hl_error wallet=0x4b4bdd73 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:24:44+00:00] hl_error wallet=0x001a1a5e Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:24:44+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:24:53+00:00] hl_error wallet=0x4b4bdd73 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:25:00+00:00] hl_error wallet=0x001a1a5e Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:25:00+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:25:06+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:25:11+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:25:22+00:00] hl_error wallet=0x4b4bdd73 Hyperliquid API failed for userFills: None
+[2026-06-11T10:25:29+00:00] hl_error wallet=0x001a1a5e Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:25:29+00:00] heartbeat wallets=2 active_positions_wallets=1 events=0
+[2026-06-11T10:25:38+00:00] hl_error wallet=0x4b4bdd73 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:25:46+00:00] hl_error wallet=0x001a1a5e Hyperliquid API failed for clearinghouseState: None

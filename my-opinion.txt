@@ -1,155 +1,150 @@
-Tao chọn:
+ếu tao là mày, sau tất cả Round 1, tao sẽ không làm theo kiểu:
 
-C — OANDA Gold Bot
+Ý tưởng → Code → Backtest → Fail
 
-Không phải vì tao nghĩ Gold dễ kiếm tiền hơn BTC.
+nữa.
 
-Mà vì giá trị thông tin trên mỗi giờ bỏ ra cao nhất.
+Tao sẽ chia thành 3 track song song.
 
-Nhìn lại những gì mày đã có:
+TRACK 1 — MONEY (70%)
 
-Crypto research
+Mục tiêu:
 
-Đã biết:
+Tìm thứ có khả năng tạo tiền nhanh nhất
+CT1 - Copy Trade Research
 
-Indicator stack      ❌
-Breakout             ❌
-ADX                  ❌
-Retest               ❌
-Regime classifier    ❌
-Long-only            ❌
-Short mirror         ❌
+Tuần này:
 
-Microstructure:
+Thu thập
 
-Funding data thiếu
-OI data thiếu
+Top 50 trader:
 
-=> Không thể tiến thêm mà không đầu tư data engineering.
+Binance
+Bybit
+Bitget
 
-Vấn đề của Option A
+Lưu:
 
-Nếu hôm nay bắt đầu crawl:
+Date
+Trader ID
+ROI 30d
+ROI 90d
+Drawdown
+AUM
+Position
 
-Funding
+DB đơn giản:
+
+traders
+trader_daily_stats
+trader_positions
+Hypothesis
+
+H1:
+
+Copy top 10 ROI
+
+H2:
+
+Copy top ROI nhưng DD thấp
+
+H3:
+
+Consensus signal
+70% trader cùng hướng
+Mục tiêu
+
+Trong 2 tuần:
+
+Trả lời được:
+Copy trade có edge không?
+TRACK 2 — RESEARCH (20%)
+
+Mục tiêu:
+
+Không để Round 2 chết
+
+Collector tiếp tục chạy:
+
+funding
 OI
 
-thì kết quả đầu tiên:
-
-Tháng 9-12/2026
-
-mới có.
-
-Đó là một khoản đầu tư rất lớn.
-
-Trong khi chưa có bất kỳ bằng chứng nào:
-
-H3 có edge
-H9 có edge
-Vấn đề của "nghỉ project"
-
-Tao không nghỉ.
-
-Tao đóng băng.
-
-Khác nhau.
-
-Tao sẽ lưu:
-
-research/
-├── v1_breakout.md
-├── v2_no_volume.md
-├── v3_adx.md
-├── v4_retest.md
-├── v5_regime.md
-├── conclusions.md
-
-và coi nó là:
-
-Research Round #1
-
-không phải thất bại.
-
-Vì sao tao chọn Gold
-
-Mày đang thiếu một thứ rất quan trọng:
-
-Kiểm tra xem vấn đề nằm ở BTC hay nằm ở cách tiếp cận.
-
-Hiện tại tất cả nghiên cứu đều trên:
-
-BTC Futures
-
-Một asset.
-
-Một market.
-
-Một cấu trúc.
-
-Nếu lấy đúng framework:
-
-Backtest
-Forward test
-Risk management
-
-đem sang Gold:
-
-XAUUSD
-
-thì mày sẽ học được:
-
-Case 1
-
-Gold cũng chết
-
-=> vấn đề nằm ở framework.
-
-Case 2
-
-Gold tốt hơn đáng kể
-
-=> vấn đề nằm ở market structure crypto.
-
-Thông tin này cực kỳ giá trị.
-
-Điều tao sẽ làm thực tế
-Nhánh chính
-OANDA Gold Bot
-Demo account
-Forward test
-
-2–4 tuần.
-
-Nhánh nền
-
-Song song:
-
-Crawler Funding
-Crawler OI
-
-chạy nền.
+Không đụng.
 
 Không phân tích.
 
-Không backtest.
+Không tối ưu.
 
-Chỉ lưu dữ liệu.
+Sau 90 ngày
 
-Đến cuối năm:
+Test:
 
-Funding history
-OI history
+H3
+H9
 
-đã tự tích lũy.
+thật sự.
 
-Lúc đó quay lại H9/H3.
+TRACK 3 — PLATFORM (10%)
 
-Nếu là tao, quyết định hôm nay sẽ là:
+Mục tiêu:
 
-70% thời gian → Gold Bot
-20% thời gian → Data Collection
-10% thời gian → Documentation
+Biến trading-tmk thành asset
 
-Vì hiện tại nút thắt không còn là ý tưởng hay code nữa.
+Việc làm:
 
-Nút thắt là thiếu dữ liệu để kiểm định hypothesis microstructure, trong khi Gold Bot cho mày một môi trường mới để tiếp tục học về execution, risk và live trading ngay lập tức.
+Tạo framework
+research/
+├── round1/
+├── round2/
+├── hypotheses/
+├── reports/
+Chuẩn hóa
+
+Mỗi hypothesis:
+
+name:
+data_required:
+event_definition:
+forward_window:
+result:
+status:
+THỨ TỰ THỰC HIỆN
+Hôm nay
+1. Git commit Round 1
+2. Verify collector sống
+3. Tạo module copy_trade/
+Tuần này
+4. Crawl top trader Binance
+5. Lưu daily stats
+6. Build consensus dashboard
+Tháng này
+7. Kiểm tra:
+Copy trade có edge không?
+MỤC TIÊU THẬT
+
+Đừng đặt mục tiêu:
+
+Kiếm 100 triệu từ bot
+
+Đặt mục tiêu:
+
+Tìm được 1 nguồn thông tin
+mà thị trường chưa phản ánh hết.
+
+Round 1 chứng minh:
+
+OHLCV không phải nguồn đó.
+
+Round 2:
+
+Funding/OI
+
+Round 3:
+
+Trader Positioning (Copy Trade)
+
+Nếu tao phải cược tiền của chính tao hôm nay, tao sẽ dồn lực vào:
+
+Trader Positioning
+
+vì đó là nguồn dữ liệu mới duy nhất mày có thể thu thập ngay, không phải đợi 3-6 tháng như Funding/OI.

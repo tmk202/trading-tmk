@@ -1,0 +1,84 @@
+/Users/alice/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+=== HYPERLIQUID REALTIME TRACKER ===
+Wallets:     10
+Source:      /Users/alice/Documents/nnt/CODE/trading-tmk/data/copy_trade/hyperliquid_tracking_universe.csv
+Interval:    3.0s
+State:       /Users/alice/Documents/nnt/CODE/trading-tmk/data/copy_trade/hyperliquid_tracker_state.json
+Positions:   /Users/alice/Documents/nnt/CODE/trading-tmk/data/copy_trade/hyperliquid_position_events.csv
+Fills:       /Users/alice/Documents/nnt/CODE/trading-tmk/data/copy_trade/hyperliquid_fill_events.csv
+
+[2026-06-11T10:18:40+00:00] hl_error wallet=0x5875d721 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:18:46+00:00] hl_error wallet=0x782e4322 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:18:52+00:00] hl_error wallet=0x9c16bc8f Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:18:59+00:00] hl_error wallet=0xbf732ea0 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:18:27+00:00] 0x4f12b217 OPEN     SHORT BTC      0->-130.569 uPnL=1778979.22 liq=99383.76
+[2026-06-11T10:18:28+00:00] 0x99b1098d OPEN     SHORT HYPE     0->-1092.37 uPnL=-16775.00 liq=180.80
+[2026-06-11T10:18:29+00:00] 0x3440f23a OPEN     SHORT AVAX     0->-10030.5 uPnL=31100.79 liq=152.79
+[2026-06-11T10:18:29+00:00] 0x3440f23a OPEN     SHORT BTC      0->-27.72 uPnL=19504.36 liq=117706.31
+[2026-06-11T10:18:29+00:00] 0x3440f23a OPEN     SHORT ETH      0->-1317.86 uPnL=767936.81 liq=2800.95
+[2026-06-11T10:19:14+00:00] hl_error wallet=0xc30c7ea9 Hyperliquid API failed for userFills: None
+[2026-06-11T10:19:28+00:00] hl_error wallet=0x9c16bc8f Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:19:36+00:00] hl_error wallet=0xbf732ea0 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:19:15+00:00] 0x5875d721 OPEN     LONG  BNB      0->8600 uPnL=137466.41 liq=465.83
+[2026-06-11T10:19:15+00:00] 0x5875d721 OPEN     SHORT BTC      0->-125.005 uPnL=-241567.76 liq=70913.17
+[2026-06-11T10:19:15+00:00] 0x5875d721 OPEN     LONG  WLD      0->3.3e+06 uPnL=32967.78 liq=0.17
+[2026-06-11T02:38:09+00:00] 0x5875d721 Close Short    BTC      px=62000.00 size=0.07 closedPnL=-73.56
+[2026-06-11T02:38:09+00:00] 0x5875d721 Close Short    BTC      px=62000.00 size=0.09 closedPnL=-101.66
+[2026-06-11T10:19:45+00:00] hl_error wallet=0x4f12b217 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:19:52+00:00] hl_error wallet=0x99b1098d Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:19:58+00:00] hl_error wallet=0x3440f23a Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:20:01+00:00] 0x404ca203 INCREASE SHORT ETH      -815.68->-817.18 uPnL=841148.02 liq=2897.22
+[2026-06-11T10:20:06+00:00] 0x9c16bc8f OPEN     SHORT BTC      0->-8.94469 uPnL=144095.36 liq=173800.48
+[2026-06-11T10:20:06+00:00] 0x9c16bc8f OPEN     SHORT ETH      0->-340.416 uPnL=314606.28 liq=4550.08
+[2026-06-11T10:20:06+00:00] 0x9c16bc8f OPEN     SHORT SOL      0->-50999.4 uPnL=1396134.18 liq=84.53
+[2026-06-11T10:19:33+00:00] 0x404ca203 Open Short     ETH      px=1654.30 size=0.50 closedPnL=0.00
+[2026-06-11T10:20:24+00:00] hl_error wallet=0x99b1098d Hyperliquid API failed for userFills: None
+[2026-06-11T10:20:31+00:00] hl_error wallet=0x3440f23a Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:20:38+00:00] hl_error wallet=0x08bf75d1 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:20:45+00:00] hl_error wallet=0x404ca203 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:20:51+00:00] hl_error wallet=0xc30c7ea9 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:20:58+00:00] hl_error wallet=0x5875d721 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:21:03+00:00] heartbeat wallets=10 active_positions_wallets=8 events=0
+[2026-06-11T10:21:17+00:00] hl_error wallet=0x08bf75d1 Hyperliquid API failed for userFills: None
+[2026-06-11T10:21:25+00:00] hl_error wallet=0xc30c7ea9 Hyperliquid API failed for userFills: None
+[2026-06-11T10:21:31+00:00] hl_error wallet=0x5875d721 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:21:38+00:00] hl_error wallet=0x782e4322 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:21:44+00:00] hl_error wallet=0x9c16bc8f Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:21:51+00:00] hl_error wallet=0xbf732ea0 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:21:51+00:00] heartbeat wallets=10 active_positions_wallets=8 events=0
+[2026-06-11T10:22:00+00:00] hl_error wallet=0x4f12b217 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:22:16+00:00] hl_error wallet=0xbf732ea0 Hyperliquid API failed for userFills: None
+[2026-06-11T10:22:02+00:00] 0x3440f23a INCREASE SHORT SOL      -11155.9->-11165.9 uPnL=295470.79 liq=199.94
+[2026-06-11T10:21:24+00:00] 0x3440f23a Open Short     SOL      px=65.45 size=1.81 closedPnL=0.00
+[2026-06-11T10:21:24+00:00] 0x3440f23a Open Short     SOL      px=65.45 size=3.19 closedPnL=0.00
+[2026-06-11T10:21:24+00:00] 0x3440f23a Open Short     SOL      px=65.32 size=5.00 closedPnL=0.00
+[2026-06-11T10:22:26+00:00] hl_error wallet=0x4f12b217 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:22:32+00:00] hl_error wallet=0x99b1098d Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:22:40+00:00] hl_error wallet=0x3440f23a Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:22:46+00:00] hl_error wallet=0x08bf75d1 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:22:53+00:00] hl_error wallet=0x404ca203 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:22:59+00:00] hl_error wallet=0xc30c7ea9 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:23:04+00:00] heartbeat wallets=10 active_positions_wallets=8 events=0
+[2026-06-11T10:23:18+00:00] hl_error wallet=0x404ca203 Hyperliquid API failed for userFills: None
+[2026-06-11T10:23:25+00:00] hl_error wallet=0xc30c7ea9 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:23:32+00:00] hl_error wallet=0x5875d721 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:23:38+00:00] hl_error wallet=0x782e4322 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:23:44+00:00] hl_error wallet=0x9c16bc8f Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:23:51+00:00] hl_error wallet=0xbf732ea0 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:23:51+00:00] heartbeat wallets=10 active_positions_wallets=8 events=0
+[2026-06-11T10:24:00+00:00] hl_error wallet=0x4f12b217 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:24:11+00:00] heartbeat wallets=10 active_positions_wallets=8 events=0
+[2026-06-11T10:24:22+00:00] hl_error wallet=0x4f12b217 Hyperliquid API failed for userFills: None
+[2026-06-11T10:24:28+00:00] hl_error wallet=0x99b1098d Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:24:35+00:00] hl_error wallet=0x3440f23a Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:24:41+00:00] hl_error wallet=0x08bf75d1 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:24:47+00:00] hl_error wallet=0x404ca203 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:24:54+00:00] hl_error wallet=0xc30c7ea9 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:25:00+00:00] hl_error wallet=0x5875d721 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:25:05+00:00] heartbeat wallets=10 active_positions_wallets=8 events=0
+[2026-06-11T10:25:24+00:00] hl_error wallet=0x404ca203 Hyperliquid API failed for userFills: None
+[2026-06-11T10:25:31+00:00] hl_error wallet=0xc30c7ea9 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:25:37+00:00] hl_error wallet=0x5875d721 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:25:44+00:00] hl_error wallet=0x782e4322 Hyperliquid API failed for clearinghouseState: None
+[2026-06-11T10:25:51+00:00] hl_error wallet=0x9c16bc8f Hyperliquid API failed for clearinghouseState: None

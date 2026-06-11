@@ -4,6 +4,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def _int_env(key: str, default: int) -> int:
+    raw = os.getenv(key, str(default))
+    try:
+        return int(raw)
+    except ValueError:
+        return default
+
+
 class Config:
     # Binance
     BINANCE_API_KEY: str = os.getenv("BINANCE_API_KEY", "")
@@ -58,10 +66,27 @@ class Config:
     ALPACA_TIMEFRAME: str = os.getenv("ALPACA_TIMEFRAME", "1h")
     ALPACA_QUOTE_SIZE: float = float(os.getenv("ALPACA_QUOTE_SIZE", "500"))
 
+    # MT5
+    MT5_LOGIN: int = _int_env("MT5_LOGIN", 0)
+    MT5_PASSWORD: str = os.getenv("MT5_PASSWORD", "")
+    MT5_SERVER: str = os.getenv("MT5_SERVER", "")
+    MT5_SYMBOL: str = os.getenv("MT5_SYMBOL", "XAUUSD")
+    MT5_TIMEFRAME: str = os.getenv("MT5_TIMEFRAME", "1h")
+    MT5_QUOTE_SIZE: float = float(os.getenv("MT5_QUOTE_SIZE", "500"))
+
     # Cooldown
     COOLDOWN_LOSSES: int = int(os.getenv("COOLDOWN_LOSSES", "2"))
     COOLDOWN_MINUTES: int = int(os.getenv("COOLDOWN_MINUTES", "30"))
     DAILY_LOSS_LIMIT: int = int(os.getenv("DAILY_LOSS_LIMIT", "3"))
+
+    # Copy Trade
+    SOLANA_PRIVATE_KEY: str = os.getenv("SOLANA_PRIVATE_KEY", "")
+    SOLANA_RPC_URL: str = os.getenv("SOLANA_RPC_URL", "https://solana-rpc.publicnode.com")
+    COPY_TRADE_POSITION_SIZE_USD: float = float(os.getenv("COPY_TRADE_POSITION_SIZE_USD", "50"))
+    COPY_TRADE_MAX_POSITIONS: int = int(os.getenv("COPY_TRADE_MAX_POSITIONS", "3"))
+    COPY_TRADE_MIN_CONFIDENCE: float = float(os.getenv("COPY_TRADE_MIN_CONFIDENCE", "0.6"))
+    COPY_TRADE_SOL_SIZE_SOL: float = float(os.getenv("COPY_TRADE_SOL_SIZE_SOL", "0.05"))
+    COPY_TRADE_SLIPPAGE_BPS: int = int(os.getenv("COPY_TRADE_SLIPPAGE_BPS", "200"))
 
     # Bot
     CHECK_INTERVAL_MINUTES: int = int(os.getenv("CHECK_INTERVAL_MINUTES", "15"))

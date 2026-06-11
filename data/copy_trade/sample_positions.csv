@@ -1,0 +1,6 @@
+platform,trader_id,symbol,side,entry_price,mark_price,leverage,size,notional,pnl,pnl_pct
+sample,t01,BTCUSDT,long,62500,62700,5,0.8,50000,160,0.32
+sample,t02,BTCUSDT,long,62100,62700,3,0.7,43500,420,0.97
+sample,t03,BTCUSDT,long,63000,62700,4,0.5,31500,-150,-0.48
+sample,t04,BTCUSDT,short,62800,62700,2,0.2,12500,20,0.16
+sample,t05,ETHUSDT,short,3400,3380,3,10,34000,200,0.59

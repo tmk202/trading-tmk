@@ -1,0 +1,1151 @@
+from __future__ import annotations
+
+import csv
+import json
+import logging
+import os
+import time
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from typing import Any
+
+logger = logging.getLogger(__name__)
+
+SOL_MINT = "So11111111111111111111111111111111111111112"
+USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+USDT_MINT = "Es9vMFrzaCERmJfrF4H2FYD4E9Gkrb2Z3M8G7WQKfE8"
+STABLE_MINTS = {USDC_MINT, USDT_MINT}
+
+SYMBOL_MAP = {
+    "SOL": "SOL/USDT",
+    "BTC": "BTC/USDT",
+    "ETH": "ETH/USDT",
+    "BNB": "BNB/USDT",
+    "DOGE": "DOGE/USDT",
+    "XRP": "XRP/USDT",
+    "AVAX": "AVAX/USDT",
+    "LTC": "LTC/USDT",
+    "ADA": "ADA/USDT",
+    "TON": "TON/USDT",
+    "LINK": "LINK/USDT",
+    "AAVE": "AAVE/USDT",
+    "ARB": "ARB/USDT",
+    "OP": "OP/USDT",
+    "APT": "APT/USDT",
+    "SUI": "SUI/USDT",
+    "WLD": "WLD/USDT",
+    "TIA": "TIA/USDT",
+    "ZEC": "ZEC/USDT",
+    "XMR": "XMR/USDT",
+    "CRV": "CRV/USDT",
+    "SNX": "SNX/USDT",
+}
+
+
+@dataclass
+class TradeSignal:
+    symbol: str
+    side: str
+    confidence: float
+    source: str
+    source_symbol: str
+    trader_count: int = 0
+    entry_price: float | None = None
+    size_usd: float = 0.0
+
+
+class CopyTradeExecutor(ABC):
+    def __init__(
+        self,
+        data_dir: str,
+        dry_run: bool = True,
+        interval: float = 60,
+        stop_loss_pct: float = 30.0,
+        take_profit_pct: float = 50.0,
+        max_daily_loss_pct: float = 30.0,
+        max_consecutive_losses: int = 3,
+        total_capital: float = 1000.0,
+    ):
+        self.data_dir = data_dir
+        self.dry_run = dry_run
+        self.interval = interval
+        self.stop_loss_pct = stop_loss_pct
+        self.take_profit_pct = take_profit_pct
+        self.max_daily_loss_pct = max_daily_loss_pct
+        self.max_consecutive_losses = max_consecutive_losses
+        self.total_capital = total_capital
+        self.active_positions: dict[str, dict[str, Any]] = {}
+        self._consecutive_losses = 0
+        self._daily_pnl: float = 0.0
+        self._circuit_breaker: bool = False
+        self._circuit_breaker_reason: str = ""
+        self._day_date: str = ""
+
+    @abstractmethod
+    def execute_signal(self, signal: TradeSignal) -> bool:
+        ...
+
+    @abstractmethod
+    def close_position(self, symbol: str) -> bool:
+        ...
+
+    def collect_signals(self) -> list[TradeSignal]:
+        return []
+
+    def run_once(self) -> list[TradeSignal]:
+        self._check_circuit_breaker()
+
+        if self._circuit_breaker:
+            logger.warning("Circuit breaker active — no new trades")
+            return []
+
+        # Kiểm tra SL/TP cho các positions đang mở
+        for sym in list(self.active_positions.keys()):
+            self._check_stop_loss(sym)
+
+        signals = self.collect_signals()
+        for signal in signals:
+            key = signal.symbol
+            existing = self.active_positions.get(key)
+            if existing and existing["side"] != signal.side:
+                logger.info("Signal flip: %s %s -> %s", key, existing["side"], signal.side)
+                self.close_position(key)
+            if signal.side == "hold":
+                continue
+            if key not in self.active_positions:
+                self.execute_signal(signal)
+        return signals
+
+    def run_loop(self, iterations: int = 0) -> None:
+        count = 0
+        while True:
+            count += 1
+            try:
+                self.run_once()
+            except KeyboardInterrupt:
+                raise
+            except Exception as exc:
+                logger.exception("Executor loop failed: %s", exc)
+
+            if iterations and count >= iterations:
+                return
+            time.sleep(self.interval)
+
+    def _check_stop_loss(self, symbol: str) -> None:
+        pos = self.active_positions.get(symbol)
+        if not pos or self.dry_run:
+            return
+        entry = pos.get("entry_price")
+        if not entry:
+            return
+        side = pos["side"]
+        try:
+            current = self._get_current_price(symbol)
+        except Exception:
+            return
+
+        if side == "buy":
+            pnl_pct = (current - entry) / entry * 100
+            if pnl_pct <= -self.stop_loss_pct:
+                logger.warning("SL HIT %s: entry=%.2f current=%.2f pnl=%.1f%%", symbol, entry, current, pnl_pct)
+                self.close_position(symbol)
+                self._consecutive_losses += 1
+                self._daily_pnl += pnl_pct / 100 * (pos.get("size_usd") or 0)
+            elif pnl_pct >= self.take_profit_pct:
+                logger.info("TP HIT %s: entry=%.2f current=%.2f pnl=%.1f%%", symbol, entry, current, pnl_pct)
+                self.close_position(symbol)
+        else:  # sell
+            pnl_pct = (entry - current) / entry * 100
+            if pnl_pct <= -self.stop_loss_pct:
+                logger.warning("SL HIT %s: entry=%.2f current=%.2f pnl=%.1f%%", symbol, entry, current, pnl_pct)
+                self.close_position(symbol)
+                self._consecutive_losses += 1
+                self._daily_pnl += pnl_pct / 100 * (pos.get("size_usd") or 0)
+            elif pnl_pct >= self.take_profit_pct:
+                logger.info("TP HIT %s: entry=%.2f current=%.2f pnl=%.1f%%", symbol, entry, current, pnl_pct)
+                self.close_position(symbol)
+
+    def _get_current_price(self, symbol: str) -> float:
+        raise NotImplementedError
+
+    def _check_circuit_breaker(self) -> None:
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        if today != self._day_date:
+            self._daily_pnl = 0.0
+            self._consecutive_losses = 0
+            self._day_date = today
+            self._circuit_breaker = False
+            self._circuit_breaker_reason = ""
+
+        if self._circuit_breaker:
+            logger.warning("Circuit breaker active: %s", self._circuit_breaker_reason)
+            return
+
+        if self._consecutive_losses >= self.max_consecutive_losses:
+            self._circuit_breaker = True
+            self._circuit_breaker_reason = f"{self._consecutive_losses} consecutive losses"
+            logger.warning("CIRCUIT BREAKER: %s", self._circuit_breaker_reason)
+
+        daily_loss_pct = abs(self._daily_pnl) / self.total_capital * 100 if self.total_capital > 0 else 0
+        if daily_loss_pct >= self.max_daily_loss_pct:
+            self._circuit_breaker = True
+            self._circuit_breaker_reason = f"Daily loss ${self._daily_pnl:.2f} ({daily_loss_pct:.1f}%) >= {self.max_daily_loss_pct}% of ${self.total_capital:.0f} capital"
+            logger.warning("CIRCUIT BREAKER: %s", self._circuit_breaker_reason)
+
+    def _load_csv(self, name: str) -> list[dict[str, str]]:
+        path = os.path.join(self.data_dir, name)
+        if not os.path.exists(path):
+            return []
+        with open(path, newline="", encoding="utf-8") as handle:
+            return list(csv.DictReader(handle))
+
+    def _log_trade(
+        self,
+        action: str,
+        symbol: str,
+        side: str,
+        price: float | None,
+        size_usd: float,
+        source: str,
+        source_symbol: str,
+        trader_count: int = 0,
+        tx_id: str = "",
+        pnl: float | None = None,
+        dry_run: bool = True,
+    ) -> None:
+        path = os.path.join(self.data_dir, "trade_history.csv")
+        fieldnames = [
+            "timestamp", "action", "symbol", "side", "price",
+            "size_usd", "source", "source_symbol", "trader_count",
+            "tx_id", "pnl", "dry_run",
+        ]
+        exists = os.path.exists(path)
+        with open(path, "a", newline="", encoding="utf-8") as handle:
+            writer = csv.DictWriter(handle, fieldnames=fieldnames)
+            if not exists:
+                writer.writeheader()
+            writer.writerow({
+                "timestamp": _now_iso(),
+                "action": action,
+                "symbol": symbol,
+                "side": side,
+                "price": price if price is not None else "",
+                "size_usd": size_usd,
+                "source": source,
+                "source_symbol": source_symbol,
+                "trader_count": trader_count,
+                "tx_id": tx_id,
+                "pnl": pnl if pnl is not None else "",
+                "dry_run": str(dry_run),
+            })
+
+
+class BinanceCopyExecutor(CopyTradeExecutor):
+    def __init__(
+        self,
+        data_dir: str,
+        dry_run: bool = True,
+        interval: float = 60,
+        max_positions: int = 3,
+        position_size_usd: float = 50,
+        min_confidence: float = 0.60,
+        stop_loss_pct: float = 30.0,
+        take_profit_pct: float = 50.0,
+        max_daily_loss_pct: float = 30.0,
+        max_consecutive_losses: int = 3,
+        total_capital: float = 1000.0,
+    ):
+        super().__init__(data_dir, dry_run, interval, stop_loss_pct, take_profit_pct, max_daily_loss_pct, max_consecutive_losses, total_capital)
+        self.max_positions = max_positions
+        self.position_size_usd = position_size_usd
+        self.min_confidence = min_confidence
+        self.exchange = None
+        self.risk_manager = None
+        self._processed_sigs: set[str] = set()
+
+    def _init_exchange(self) -> None:
+        if self.exchange is not None:
+            return
+        if self.dry_run:
+            return
+        try:
+            from exchange import Exchange
+            from risk_manager import RiskManager
+
+            self.exchange = Exchange()
+            balance = self.exchange.fetch_balance()
+            usdt = float(balance.get("USDT", {}).get("free", 0))
+            self.risk_manager = RiskManager(usdt)
+            logger.info("Binance connected. USDT balance: %.2f", usdt)
+        except Exception as exc:
+            logger.warning("Binance init failed (dry-run will simulate): %s", exc)
+
+    def collect_signals(self) -> list[TradeSignal]:
+        # Ưu tiên 1: Copy realtime từ wallet_trade_events (ví mua/bán SOL)
+        copy_signals = self._collect_wallet_copy_signals()
+        if copy_signals:
+            return copy_signals
+
+        # Ưu tiên 2: Macro sentiment từ snapshot OKX
+        return self._collect_macro_sentiment()
+
+    def _collect_wallet_copy_signals(self) -> list[TradeSignal]:
+        events = self._load_csv("wallet_trade_events.csv")
+        if not events:
+            logger.debug("Need wallet_trade_events.csv for wallet copy")
+            return []
+
+        selection = self._load_csv("wallet_selection.csv")
+        selected = {row.get("wallet", "") for row in selection} if selection else {}
+
+        now = datetime.now(timezone.utc)
+        cutoff = now.timestamp() - 600
+
+        signals: list[TradeSignal] = []
+        seen_actions: dict[str, list[dict[str, str]]] = {}
+        recent_count = 0
+        near_count = 0
+        for row in reversed(events):
+            wallet = row.get("wallet", "")
+            sig = row.get("signature", "")
+            action = row.get("action", "")
+            block_time_str = row.get("block_time", "")
+
+            if sig in self._processed_sigs:
+                continue
+            if action not in ("buy", "sell"):
+                continue
+
+            block_ts = _parse_iso_to_ts(block_time_str)
+            if block_ts is None:
+                continue
+
+            age_m = (now.timestamp() - block_ts) / 60
+            recent_count += 1
+
+            if block_ts < cutoff:
+                continue
+
+            # Chỉ copy từ wallet đã chọn (trusted)
+            if selected and wallet not in selected:
+                continue
+
+            near_count += 1
+            self._processed_sigs.add(sig)
+            seen_actions.setdefault(wallet, []).append(row)
+
+        for s in signals:
+            logger.info("Wallet copy: %s SOL/USDT $%.0f (%.0f%% conf) from %d wallet(s)",
+                         s.side.upper(), s.size_usd, s.confidence * 100, len(seen_actions))
+
+        return signals
+
+    def _collect_macro_sentiment(self) -> list[TradeSignal]:
+        selection = self._load_csv("wallet_selection.csv")
+        positions = self._load_csv("trader_positions.csv")
+
+        if not selection or not positions:
+            logger.debug("Need wallet_selection.csv and trader_positions.csv for macro signal")
+            return []
+
+        selected_wallets = {row.get("wallet", "") for row in selection if row.get("wallet")}
+
+        wallet_direction: dict[str, str] = {}
+        for pos in positions:
+            wallet = pos.get("trader_id", "")
+            if wallet not in selected_wallets:
+                continue
+            side = (pos.get("side") or "").lower()
+            if side in ("long", "buy"):
+                wallet_direction[wallet] = "long"
+            elif side in ("short", "sell"):
+                wallet_direction[wallet] = "short"
+
+        long_wallets = sum(1 for d in wallet_direction.values() if d == "long")
+        short_wallets = sum(1 for d in wallet_direction.values() if d == "short")
+        total = long_wallets + short_wallets
+
+        if total == 0:
+            logger.debug("No directional positions from selected wallets")
+            return []
+
+        long_ratio = long_wallets / total
+        short_ratio = short_wallets / total
+        confidence = max(long_ratio, short_ratio)
+
+        if confidence < self.min_confidence:
+            logger.info("Sentiment below threshold: long=%d/%d (%.0f%%), short=%d/%d (%.0f%%)",
+                         long_wallets, total, long_ratio * 100,
+                         short_wallets, total, short_ratio * 100)
+            return []
+
+        side = "buy" if long_ratio >= short_ratio else "sell"
+        signal = TradeSignal(
+            symbol="SOL/USDT",
+            side=side,
+            confidence=confidence,
+            source="macro_sentiment",
+            source_symbol="SOL",
+            trader_count=long_wallets if side == "buy" else short_wallets,
+            size_usd=self.position_size_usd,
+        )
+
+        logger.info("Macro sentiment: LONG=%d/%d (%.0f%%) SHORT=%d/%d (%.0f%%) → %s SOL/USDT $%.0f (%.0f%% conf)",
+                     long_wallets, total, long_ratio * 100,
+                     short_wallets, total, short_ratio * 100,
+                     side.upper(), self.position_size_usd, confidence * 100)
+        return [signal]
+
+    def execute_signal(self, signal: TradeSignal) -> bool:
+        self._init_exchange()
+        if len(self.active_positions) >= self.max_positions:
+            logger.info("Max positions reached (%d), skip %s %s", self.max_positions, signal.side, signal.symbol)
+            return False
+
+        if self.dry_run:
+            logger.info(
+                "[DRY-RUN] %s %s $%.0f (confidence=%.0f%%, traders=%d, source=%s)",
+                signal.side.upper(), signal.symbol, signal.size_usd,
+                signal.confidence * 100, signal.trader_count, signal.source_symbol,
+            )
+            self.active_positions[signal.symbol] = {
+                "side": signal.side,
+                "entry_time": _now_iso(),
+                "signal": signal,
+            }
+            self._log_trade("open", signal.symbol, signal.side, None, signal.size_usd,
+                            signal.source, signal.source_symbol, signal.trader_count, dry_run=True)
+            return True
+
+        try:
+            ticker = self.exchange.get_ticker(signal.symbol)
+            price = ticker["last"]
+            usdt_balance = self.exchange.get_free_balance("USDT")
+            if usdt_balance < signal.size_usd:
+                logger.warning("Insufficient USDT: need %.2f, have %.2f", signal.size_usd, usdt_balance)
+                return False
+
+            amount = signal.size_usd / price
+            order = self.exchange.create_market_order(signal.side, amount, signal.symbol)
+            self.active_positions[signal.symbol] = {
+                "side": signal.side,
+                "entry_price": price,
+                "entry_time": _now_iso(),
+                "amount": amount,
+                "order": order,
+                "signal": signal,
+            }
+            logger.info("EXECUTED %s %s %.6f @ %.2f", signal.side.upper(), signal.symbol, amount, price)
+            self._log_trade("open", signal.symbol, signal.side, price, signal.size_usd,
+                            signal.source, signal.source_symbol, signal.trader_count,
+                            tx_id=str(order.get("id", "")), dry_run=False)
+            return True
+        except Exception as exc:
+            logger.error("Execute failed %s %s: %s", signal.side, signal.symbol, exc)
+            return False
+
+    def _get_current_price(self, symbol: str) -> float:
+        if self.exchange is None and not self.dry_run:
+            self._init_exchange()
+        if self.dry_run or self.exchange is None:
+            return 0.0
+        try:
+            ticker = self.exchange.get_ticker(symbol)
+            return ticker["last"]
+        except Exception:
+            return 0.0
+
+    def close_position(self, symbol: str) -> bool:
+        pos = self.active_positions.get(symbol)
+        if not pos:
+            return False
+        close_side = "sell" if pos["side"] == "buy" else "buy"
+
+        if self.dry_run:
+            logger.info("[DRY-RUN] CLOSE %s %s", close_side.upper(), symbol)
+            self._log_trade("close_dry", symbol, close_side, None, 0,
+                            "binance", symbol.split("/")[0], dry_run=True)
+            self.active_positions.pop(symbol, None)
+            return True
+
+        try:
+            base = symbol.split("/")[0]
+            amount = self.exchange.get_free_balance(base)
+            if amount <= 0:
+                logger.warning("No %s balance to close", base)
+                self.active_positions.pop(symbol, None)
+                return False
+            self.exchange.create_market_order(close_side, amount, symbol)
+            self.active_positions.pop(symbol, None)
+            logger.info("CLOSED %s %s %.6f", close_side.upper(), symbol, amount)
+            return True
+        except Exception as exc:
+            logger.error("Close failed %s: %s", symbol, exc)
+            return False
+
+
+class SolanaCopyExecutor(CopyTradeExecutor):
+    def __init__(
+        self,
+        data_dir: str,
+        dry_run: bool = True,
+        interval: float = 60,
+        max_positions: int = 3,
+        copy_size_sol: float = 0.05,
+        min_win_rate: float = 55,
+        min_trades: int = 50,
+        slippage_bps: int = 200,
+        private_key: str | None = None,
+        rpc_url: str = "https://solana-rpc.publicnode.com",
+    ):
+        super().__init__(data_dir, dry_run, interval)
+        self.max_positions = max_positions
+        self.copy_size_sol = copy_size_sol
+        self.min_win_rate = min_win_rate
+        self.min_trades = min_trades
+        self.slippage_bps = slippage_bps
+        self.private_key = private_key
+        self.rpc_url = rpc_url
+        self._kp = None
+        self._wallet_blacklist: set[str] = set()
+        self._processed_sigs: set[str] = set()
+
+    def _init_wallet(self) -> bool:
+        if self._kp is not None:
+            return True
+        if self.dry_run:
+            self._kp = "dry_run"
+            return True
+        if not self.private_key:
+            logger.warning("No Solana private key set. Use SOLANA_PRIVATE_KEY env or --solana-key")
+            return False
+        try:
+            from solders.keypair import Keypair
+            import base58
+            decoded = base58.b58decode(str(self.private_key).strip())
+            self._kp = Keypair.from_bytes(decoded)
+            logger.info("Solana wallet loaded: %s", self._kp.pubkey())
+            return True
+        except Exception as exc:
+            logger.error("Failed to load Solana keypair: %s", exc)
+            return False
+
+    def collect_signals(self) -> list[TradeSignal]:
+        rows = self._load_csv("wallet_trade_events.csv")
+        if not rows:
+            logger.debug("No wallet trade events CSV")
+            return []
+
+        # Ưu tiên wallet_selection.csv (chỉ copy từ ví đã chọn)
+        selection = self._load_csv("wallet_selection.csv")
+        if selection:
+            trusted = {row.get("wallet", "") for row in selection if row.get("wallet")}
+        else:
+            perf_rows = self._load_csv("wallet_performance.csv")
+            trusted = self._build_trusted_wallets(perf_rows)
+
+        signals: list[TradeSignal] = []
+        seen_tokens: dict[str, list[dict[str, str]]] = {}
+        for row in rows:
+            wallet = row.get("wallet", "")
+            sig = row.get("signature", "")
+            if sig in self._processed_sigs:
+                continue
+            if wallet not in trusted and trusted:
+                continue
+            token = row.get("token_mint", "")
+            action = row.get("action", "")
+            if not token or token in STABLE_MINTS or token == SOL_MINT:
+                continue
+            if action not in ("buy", "sell"):
+                continue
+            seen_tokens.setdefault(token, []).append(row)
+
+        for token, token_rows in seen_tokens.items():
+            latest = token_rows[-1]
+            action = latest["action"]
+            side_map = {"buy": "buy", "sell": "sell"}
+            side = side_map.get(action, "hold")
+            if side == "hold":
+                continue
+
+            token_symbol = latest.get("token_symbol") or token[:8]
+            signals.append(TradeSignal(
+                symbol=token,
+                side=side,
+                confidence=0.75,
+                source="wallet_copy",
+                source_symbol=token_symbol,
+                trader_count=len({r.get("wallet") for r in token_rows}),
+                size_usd=self.copy_size_sol,
+            ))
+
+        return signals
+
+    def _build_trusted_wallets(self, perf_rows: list[dict[str, str]]) -> set[str]:
+        trusted = set()
+        for row in perf_rows:
+            wr = _to_float(row.get("win_rate_pct"))
+            tx = _to_float(row.get("tx"))
+            if wr is not None and wr >= self.min_win_rate:
+                if tx is None or tx >= self.min_trades:
+                    wallet = row.get("wallet", "")
+                    if wallet:
+                        trusted.add(wallet)
+        return trusted
+
+    def execute_signal(self, signal: TradeSignal) -> bool:
+        if len(self.active_positions) >= self.max_positions:
+            logger.info("Max positions (%d), skip %s %s", self.max_positions, signal.side, signal.source_symbol)
+            return False
+
+        if self.dry_run:
+            logger.info(
+                "[DRY-RUN] %s %s (%.2f SOL input, %.0f%% slippage) trust_wallets=%d",
+                signal.side.upper(), signal.source_symbol, self.copy_size_sol,
+                self.slippage_bps / 100, signal.trader_count,
+            )
+            self.active_positions[signal.symbol] = {
+                "side": signal.side,
+                "entry_time": _now_iso(),
+                "signal": signal,
+            }
+            self._log_trade("open", signal.source_symbol, signal.side, None, self.copy_size_sol,
+                            signal.source, signal.source_symbol, signal.trader_count, dry_run=True)
+            return True
+
+        if not self._init_wallet():
+            return False
+
+        output_mint = USDC_MINT if signal.side == "sell" else signal.symbol
+        input_mint = signal.symbol if signal.side == "sell" else USDC_MINT
+        quote = self._jupiter_quote(input_mint, output_mint, signal.side, signal)
+        if quote is None:
+            return False
+
+        return self._execute_swap(quote, signal)
+
+    def _jupiter_quote(self, input_mint: str, output_mint: str, side: str, signal: TradeSignal) -> dict | None:
+        import requests
+        try:
+            amount = int(self.copy_size_sol * 1_000_000_000) if input_mint == SOL_MINT else int(self.copy_size_sol * 1_000_000)
+            resp = requests.get(
+                "https://quote-api.jup.ag/v6/quote",
+                params={
+                    "inputMint": input_mint,
+                    "outputMint": output_mint,
+                    "amount": amount,
+                    "slippageBps": self.slippage_bps,
+                },
+                timeout=15,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            if not data or isinstance(data, list):
+                logger.warning("No quote for %s %s", side, signal.source_symbol)
+                return None
+            return data
+        except Exception as exc:
+            logger.warning("Jupiter quote error %s: %s", signal.source_symbol, exc)
+            return None
+
+    def _execute_swap(self, quote: dict, signal: TradeSignal) -> bool:
+        import requests
+        try:
+            swap_resp = requests.post(
+                "https://quote-api.jup.ag/v6/swap",
+                json={
+                    "quoteResponse": quote,
+                    "userPublicKey": str(self._kp.pubkey()),
+                    "wrapAndUnwrapSol": True,
+                    "dynamicComputeUnitLimit": True,
+                    "prioritizationFeeLamports": "auto",
+                },
+                timeout=20,
+            )
+            swap_resp.raise_for_status()
+            swap_data = swap_resp.json()
+
+            import base64
+            from solders.transaction import VersionedTransaction
+            from solana.rpc.api import Client
+
+            tx_bytes = base64.b64decode(swap_data["swapTransaction"])
+            tx = VersionedTransaction.from_bytes(tx_bytes)
+            signed_tx = VersionedTransaction(tx.message, [self._kp])
+
+            client = Client(self.rpc_url)
+            result = client.send_raw_transaction(bytes(signed_tx))
+            tx_sig = result.value
+
+            self.active_positions[signal.symbol] = {
+                "side": signal.side,
+                "entry_time": _now_iso(),
+                "signal": signal,
+                "tx_signature": str(tx_sig),
+                "input_amount": quote.get("inAmount"),
+                "output_amount": quote.get("outAmount"),
+            }
+            logger.info("EXECUTED %s %s tx=%s", signal.side.upper(), signal.source_symbol, tx_sig)
+            return True
+        except Exception as exc:
+            logger.error("Swap failed %s %s: %s", signal.side, signal.source_symbol, exc)
+            return False
+
+    def close_position(self, symbol: str) -> bool:
+        pos = self.active_positions.get(symbol)
+        if not pos:
+            return False
+        close_signal = TradeSignal(
+            symbol=symbol,
+            side="sell" if pos["side"] == "buy" else "buy",
+            confidence=1.0,
+            source="position_close",
+            source_symbol=(pos.get("signal") or {}).source_symbol if isinstance(pos.get("signal"), TradeSignal) else symbol[:8],
+        )
+        if self.dry_run:
+            logger.info("[DRY-RUN] CLOSE %s", close_signal.source_symbol)
+            self.active_positions.pop(symbol, None)
+            return True
+        return self.execute_signal(close_signal)
+
+
+class HyperliquidCopyExecutor(BinanceCopyExecutor):
+    def __init__(
+        self,
+        data_dir: str,
+        dry_run: bool = True,
+        interval: float = 60,
+        max_positions: int = 3,
+        position_size_usd: float = 50,
+        min_confidence: float = 0.70,
+        min_delta_notional: float = 1000.0,
+        recent_seconds: int = 900,
+        trusted_wallets_csv: str = "hyperliquid_leaderboard.csv",
+        stop_loss_pct: float = 30.0,
+        take_profit_pct: float = 50.0,
+        max_daily_loss_pct: float = 30.0,
+        max_consecutive_losses: int = 3,
+        total_capital: float = 1000.0,
+    ):
+        super().__init__(
+            data_dir=data_dir,
+            dry_run=dry_run,
+            interval=interval,
+            max_positions=max_positions,
+            position_size_usd=position_size_usd,
+            min_confidence=min_confidence,
+            stop_loss_pct=stop_loss_pct,
+            take_profit_pct=take_profit_pct,
+            max_daily_loss_pct=max_daily_loss_pct,
+            max_consecutive_losses=max_consecutive_losses,
+            total_capital=total_capital,
+        )
+        self.min_delta_notional = min_delta_notional
+        self.recent_seconds = recent_seconds
+        self.trusted_wallets_csv = trusted_wallets_csv
+        self.copy_state_path = os.path.join(self.data_dir, "hyperliquid_copy_state.json")
+        self._processed_sigs.update(self._load_processed_state())
+
+    def collect_signals(self) -> list[TradeSignal]:
+        position_signals = self._collect_hyperliquid_position_signals()
+        if position_signals:
+            self._mark_recent_hyperliquid_positions_processed()
+            self._mark_recent_hyperliquid_fills_processed()
+            return position_signals
+        return self._collect_hyperliquid_fill_signals()
+
+    def _collect_hyperliquid_position_signals(self) -> list[TradeSignal]:
+        events = self._load_csv("hyperliquid_position_events.csv")
+        if not events:
+            logger.debug("Need hyperliquid_position_events.csv")
+            return []
+
+        trusted = self._trusted_hyperliquid_wallets()
+        cutoff = time.time() - self.recent_seconds
+        signals: list[TradeSignal] = []
+        seen_symbols: set[str] = set()
+
+        for row in reversed(events):
+            wallet = (row.get("wallet") or "").lower()
+            if trusted and wallet not in trusted:
+                continue
+
+            event_id = "|".join([
+                wallet,
+                row.get("collected_at", ""),
+                row.get("event_type", ""),
+                row.get("coin", ""),
+                row.get("current_size", ""),
+            ])
+            if event_id in self._processed_sigs:
+                continue
+
+            ts = _parse_iso_to_ts(row.get("collected_at", ""))
+            if ts is None or ts < cutoff:
+                continue
+
+            event_type = (row.get("event_type") or "").lower()
+            if event_type not in ("open", "increase", "flip"):
+                continue
+
+            coin = (row.get("coin") or "").upper()
+            symbol = _hyperliquid_coin_to_symbol(coin)
+            if not symbol or symbol in seen_symbols:
+                continue
+
+            delta_notional = _event_delta_notional(row)
+            if delta_notional < self.min_delta_notional:
+                continue
+
+            hl_side = (row.get("side") or "").lower()
+            if hl_side not in ("long", "short"):
+                continue
+            side = "buy" if hl_side == "long" else "sell"
+
+            confidence = self._wallet_confidence(wallet)
+            if confidence < self.min_confidence:
+                continue
+
+            self._mark_processed(event_id)
+            seen_symbols.add(symbol)
+            signals.append(TradeSignal(
+                symbol=symbol,
+                side=side,
+                confidence=confidence,
+                source="hyperliquid_position_copy",
+                source_symbol=coin,
+                trader_count=1,
+                entry_price=_to_float(row.get("entry_price")),
+                size_usd=self.position_size_usd,
+            ))
+
+            logger.info(
+                "Hyperliquid copy signal: %s %s from %s %s delta≈$%.0f conf=%.0f%%",
+                side.upper(), symbol, wallet[:10], event_type, delta_notional, confidence * 100,
+            )
+
+        return signals
+
+    def _mark_recent_hyperliquid_positions_processed(self) -> None:
+        events = self._load_csv("hyperliquid_position_events.csv")
+        if not events:
+            return
+        cutoff = time.time() - self.recent_seconds
+        changed = False
+        for row in reversed(events):
+            ts = _parse_iso_to_ts(row.get("collected_at", ""))
+            if ts is None or ts < cutoff:
+                continue
+            event_id = _hyperliquid_position_event_id(row)
+            if event_id and event_id not in self._processed_sigs:
+                self._processed_sigs.add(event_id)
+                changed = True
+        if changed:
+            self._save_processed_state()
+
+    def _collect_hyperliquid_fill_signals(self) -> list[TradeSignal]:
+        fills = self._load_csv("hyperliquid_fill_events.csv")
+        if not fills:
+            return []
+
+        trusted = self._trusted_hyperliquid_wallets()
+        cutoff = time.time() - self.recent_seconds
+        signals: list[TradeSignal] = []
+        seen_symbols: set[str] = set()
+
+        for row in reversed(fills):
+            wallet = (row.get("wallet") or "").lower()
+            if trusted and wallet not in trusted:
+                continue
+            tid = row.get("tid") or row.get("hash") or ""
+            if tid in self._processed_sigs:
+                continue
+            ts = _parse_iso_to_ts(row.get("fill_time", ""))
+            if ts is None or ts < cutoff:
+                continue
+
+            direction = (row.get("direction") or "").lower()
+            if not direction.startswith("open"):
+                continue
+
+            coin = (row.get("coin") or "").upper()
+            symbol = _hyperliquid_coin_to_symbol(coin)
+            if not symbol or symbol in seen_symbols:
+                continue
+
+            price = _to_float(row.get("price"))
+            size = _to_float(row.get("size"))
+            if price * size < self.min_delta_notional:
+                continue
+
+            side = "buy" if "long" in direction else "sell" if "short" in direction else ""
+            if not side:
+                continue
+
+            confidence = self._wallet_confidence(wallet)
+            if confidence < self.min_confidence:
+                continue
+
+            self._mark_processed(tid)
+            seen_symbols.add(symbol)
+            signals.append(TradeSignal(
+                symbol=symbol,
+                side=side,
+                confidence=confidence,
+                source="hyperliquid_fill_copy",
+                source_symbol=coin,
+                trader_count=1,
+                entry_price=price,
+                size_usd=self.position_size_usd,
+            ))
+
+        return signals
+
+    def _mark_recent_hyperliquid_fills_processed(self) -> None:
+        fills = self._load_csv("hyperliquid_fill_events.csv")
+        if not fills:
+            return
+        cutoff = time.time() - self.recent_seconds
+        changed = False
+        for row in reversed(fills):
+            tid = row.get("tid") or row.get("hash") or ""
+            if not tid or tid in self._processed_sigs:
+                continue
+            ts = _parse_iso_to_ts(row.get("fill_time", ""))
+            if ts is None or ts < cutoff:
+                continue
+            self._processed_sigs.add(tid)
+            changed = True
+        if changed:
+            self._save_processed_state()
+
+    def _trusted_hyperliquid_wallets(self) -> set[str]:
+        rows = self._load_csv(self.trusted_wallets_csv)
+        if not rows:
+            return set()
+        trusted = set()
+        for row in rows:
+            wallet = (row.get("wallet") or row.get("ethAddress") or "").lower()
+            if wallet:
+                trusted.add(wallet)
+        return trusted
+
+    def _wallet_confidence(self, wallet: str) -> float:
+        rows = self._load_csv(self.trusted_wallets_csv)
+        for row in rows:
+            row_wallet = (row.get("wallet") or row.get("ethAddress") or "").lower()
+            if row_wallet != wallet:
+                continue
+            roi = _to_float(row.get("roi"))
+            volume = _to_float(row.get("volume"))
+            confidence = 0.70
+            if roi > 1:
+                confidence += 0.10
+            if volume > 1_000_000:
+                confidence += 0.10
+            if str(row.get("active_24h")).lower() == "true":
+                confidence += 0.05
+            return min(confidence, 0.95)
+        return 0.75
+
+    def _load_processed_state(self) -> set[str]:
+        if not os.path.exists(self.copy_state_path):
+            return set()
+        try:
+            with open(self.copy_state_path, encoding="utf-8") as handle:
+                data = json.load(handle)
+            items = data.get("processed_ids", []) if isinstance(data, dict) else []
+            return {str(item) for item in items}
+        except Exception:
+            return set()
+
+    def _mark_processed(self, event_id: str) -> None:
+        self._processed_sigs.add(event_id)
+        self._save_processed_state()
+
+    def _save_processed_state(self) -> None:
+        try:
+            os.makedirs(os.path.dirname(self.copy_state_path), exist_ok=True)
+            recent = list(dict.fromkeys(list(self._processed_sigs)[-5000:]))
+            with open(self.copy_state_path, "w", encoding="utf-8") as handle:
+                json.dump({"updated_at": _now_iso(), "processed_ids": recent}, handle, indent=2, sort_keys=True)
+        except Exception as exc:
+            logger.debug("Could not save Hyperliquid copy state: %s", exc)
+
+
+class CopyTradeOrchestrator:
+    def __init__(self, data_dir: str, dry_run: bool = True):
+        self.data_dir = data_dir
+        self.dry_run = dry_run
+        self.executors: list[CopyTradeExecutor] = []
+
+    def add(self, executor: CopyTradeExecutor) -> None:
+        self.executors.append(executor)
+
+    def run_once(self) -> list[TradeSignal]:
+        all_signals = []
+        for executor in self.executors:
+            signals = executor.run_once()
+            all_signals.extend(signals)
+        return all_signals
+
+    def run_loop(self, iterations: int = 0) -> None:
+        import threading
+        threads = []
+        for executor in self.executors:
+            t = threading.Thread(target=executor.run_loop, args=(iterations,), daemon=True)
+            t.start()
+            threads.append(t)
+        for t in threads:
+            t.join()
+
+
+def build_binance_executor(
+    data_dir: str,
+    dry_run: bool = True,
+    interval: float = 60,
+    max_positions: int = 3,
+    position_size_usd: float = 50,
+    min_confidence: float = 0.60,
+    stop_loss_pct: float = 5.0,
+    take_profit_pct: float = 10.0,
+    max_daily_loss_pct: float = 10.0,
+    max_consecutive_losses: int = 3,
+    total_capital: float = 1000.0,
+) -> BinanceCopyExecutor:
+    return BinanceCopyExecutor(
+        data_dir=data_dir,
+        dry_run=dry_run,
+        interval=interval,
+        max_positions=max_positions,
+        position_size_usd=position_size_usd,
+        min_confidence=min_confidence,
+        stop_loss_pct=stop_loss_pct,
+        take_profit_pct=take_profit_pct,
+        max_daily_loss_pct=max_daily_loss_pct,
+        max_consecutive_losses=max_consecutive_losses,
+        total_capital=total_capital,
+    )
+
+
+def build_solana_executor(
+    data_dir: str,
+    dry_run: bool = True,
+    interval: float = 60,
+    max_positions: int = 3,
+    copy_size_sol: float = 0.05,
+    min_win_rate: float = 55,
+    min_trades: int = 50,
+    slippage_bps: int = 200,
+    private_key: str | None = None,
+    rpc_url: str = "https://solana-rpc.publicnode.com",
+) -> SolanaCopyExecutor:
+    return SolanaCopyExecutor(
+        data_dir=data_dir,
+        dry_run=dry_run,
+        interval=interval,
+        max_positions=max_positions,
+        copy_size_sol=copy_size_sol,
+        min_win_rate=min_win_rate,
+        min_trades=min_trades,
+        slippage_bps=slippage_bps,
+        private_key=private_key,
+        rpc_url=rpc_url,
+    )
+
+
+def build_hyperliquid_executor(
+    data_dir: str,
+    dry_run: bool = True,
+    interval: float = 60,
+    max_positions: int = 3,
+    position_size_usd: float = 50,
+    min_confidence: float = 0.70,
+    min_delta_notional: float = 1000.0,
+    recent_seconds: int = 900,
+    stop_loss_pct: float = 30.0,
+    take_profit_pct: float = 50.0,
+    max_daily_loss_pct: float = 30.0,
+    max_consecutive_losses: int = 3,
+    total_capital: float = 1000.0,
+) -> HyperliquidCopyExecutor:
+    return HyperliquidCopyExecutor(
+        data_dir=data_dir,
+        dry_run=dry_run,
+        interval=interval,
+        max_positions=max_positions,
+        position_size_usd=position_size_usd,
+        min_confidence=min_confidence,
+        min_delta_notional=min_delta_notional,
+        recent_seconds=recent_seconds,
+        stop_loss_pct=stop_loss_pct,
+        take_profit_pct=take_profit_pct,
+        max_daily_loss_pct=max_daily_loss_pct,
+        max_consecutive_losses=max_consecutive_losses,
+        total_capital=total_capital,
+    )
+
+
+def _to_float(value: Any) -> float:
+    if value in (None, ""):
+        return 0.0
+    try:
+        return float(str(value).replace(",", "").replace("%", ""))
+    except ValueError:
+        return 0.0
+
+
+def _to_int(value: Any) -> int | None:
+    if value in (None, ""):
+        return None
+    try:
+        return int(float(str(value).replace(",", "")))
+    except ValueError:
+        return None
+
+
+def _hyperliquid_coin_to_symbol(coin: str) -> str:
+    if not coin or coin.startswith("@") or ":" in coin or coin.startswith("#"):
+        return ""
+    return SYMBOL_MAP.get(coin.upper(), "")
+
+
+def _event_delta_notional(row: dict[str, str]) -> float:
+    size_delta = abs(_to_float(row.get("size_delta")))
+    entry = _to_float(row.get("entry_price"))
+    if size_delta and entry:
+        return size_delta * entry
+
+    previous = abs(_to_float(row.get("previous_size")))
+    current = abs(_to_float(row.get("current_size")))
+    value = _to_float(row.get("position_value"))
+    if value and current:
+        return value * abs(current - previous) / current
+    return value
+
+
+def _hyperliquid_position_event_id(row: dict[str, str]) -> str:
+    wallet = (row.get("wallet") or "").lower()
+    return "|".join([
+        wallet,
+        row.get("collected_at", ""),
+        row.get("event_type", ""),
+        row.get("coin", ""),
+        row.get("current_size", ""),
+    ])
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+
+def _parse_iso_to_ts(iso_str: str) -> float | None:
+    if not iso_str:
+        return None
+    try:
+        dt = datetime.fromisoformat(iso_str)
+        return dt.timestamp()
+    except (ValueError, TypeError):
+        return None

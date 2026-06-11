@@ -1,0 +1,6 @@
+platform,trader_id,nickname,rank,roi_30d,drawdown,aum,followers,win_rate,total_trades,copy_trade_days
+sample,t01,Alpha,1,42.5,12.0,120000,350,61.0,180,120
+sample,t02,Bravo,2,31.0,9.5,90000,220,58.0,140,95
+sample,t03,Charlie,3,26.0,18.0,75000,180,54.0,90,80
+sample,t04,Delta,4,18.0,8.0,60000,130,57.0,75,70
+sample,t05,Echo,5,15.0,22.0,50000,90,49.0,60,45

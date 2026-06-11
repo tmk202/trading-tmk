@@ -1,0 +1,14 @@
+{
+  "all_urls": [
+    "/copyTrading/en/leaderboard-master",
+    "https://www.bybit.com/copyTrading/en/leaderboard-master"
+  ],
+  "api_urls": [
+    "/copyTrading/en/leaderboard-master",
+    "https://www.bybit.com/copyTrading/en/leaderboard-master"
+  ],
+  "html_bytes": 185358,
+  "next_data_keys": [],
+  "text_sample": "www.bybit.com Không thể truy cập trang web này Trang web tại https://www.bybit.com/copyTrading/en/leaderboard-master có thể tạm thời không hoạt động hay được chuyển vĩnh viễn sang địa chỉ web mới. ERR_HTTP2_PROTOCOL_ERROR Trang web tại https://www.bybit.com/copyTrading/en/leaderboard-master có thể tạm thời không hoạt động hay được chuyển vĩnh viễn sang địa chỉ web mới.",
+  "title": "www.bybit.com"
+}

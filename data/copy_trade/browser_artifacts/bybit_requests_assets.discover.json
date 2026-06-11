@@ -1,0 +1,454 @@
+{
+  "all_urls": [
+    "/LeaderBoard/768/banner/arrow-down.svg",
+    "/LeaderBoard/768/banner/check.svg",
+    "/LeaderBoard/768/banner/close.svg",
+    "/LeaderBoard/main/arrow.svg",
+    "/LeaderBoard/main/fire-gray.svg",
+    "/LeaderBoard/main/fire.svg",
+    "/LeaderBoard/main/tableNoData.svg",
+    "/LeaderBoardMaster/768/banner/background.png",
+    "/LeaderBoardMaster/768/main/card/bronze-background.png",
+    "/LeaderBoardMaster/768/main/card/bronze.png",
+    "/LeaderBoardMaster/768/main/card/cadet-background.png",
+    "/LeaderBoardMaster/768/main/card/cadet.png",
+    "/LeaderBoardMaster/768/main/card/gold-background.png",
+    "/LeaderBoardMaster/768/main/card/gold.png",
+    "/LeaderBoardMaster/768/main/card/silver-background.png",
+    "/LeaderBoardMaster/768/main/card/silver.png",
+    "/LeaderBoardMaster/768/main/gray-line-arrow-down.svg",
+    "/LeaderBoardMaster/header/banner.jpg",
+    "/LeaderBoardMaster/header/bronze-star.png",
+    "/LeaderBoardMaster/header/gold-star.png",
+    "/LeaderBoardMaster/header/share-black.png",
+    "/LeaderBoardMaster/header/share.png",
+    "/LeaderBoardMaster/header/silver-star.png",
+    "/LeaderBoardMaster/icon/arrow-right.svg",
+    "/LeaderBoardMaster/icon/profit-gray.svg",
+    "/LeaderBoardMaster/icon/profit.svg",
+    "/LeaderBoardMaster/icon/yellow-arrow-down.svg",
+    "/leaderboard-master",
+    "/leaderboard-master-984f0019a50df4a2.js",
+    "http://www.metatrader4.com",
+    "https://www.bybit.com/app/terms-service/riskDisclosure",
+    "https://www.bybit.com/en/help-center/article/User-Agreement-Bybit-Metatrader-5-MT5",
+    "https://www.googletagmanager.com/gtm.js?id=",
+    "https://www.tradingview.com/",
+    "https://www.tradingview.com/desktop/",
+    "https://www.tradingview.com/ideas/editors-picks/",
+    "https://www.tradingview.com/news/",
+    "https://www.tradingview.com/pricing/?source=header_main_menu",
+    "https://www.tradingview.com/screener/",
+    "https://www.tradingview.com/support/",
+    "https://www.tradingview.com/support/solutions/43000516466-paper-trading-main-functionality/",
+    "https://www.tradingview.com/support/tickets/",
+    "https://www.youtube.com/results?search_query=tradingview"
+  ],
+  "api_urls": [
+    "/LeaderBoard/768/banner/arrow-down.svg",
+    "/LeaderBoard/768/banner/check.svg",
+    "/LeaderBoard/768/banner/close.svg",
+    "/LeaderBoard/main/arrow.svg",
+    "/LeaderBoard/main/fire-gray.svg",
+    "/LeaderBoard/main/fire.svg",
+    "/LeaderBoard/main/tableNoData.svg",
+    "/LeaderBoardMaster/768/banner/background.png",
+    "/LeaderBoardMaster/768/main/card/bronze-background.png",
+    "/LeaderBoardMaster/768/main/card/bronze.png",
+    "/LeaderBoardMaster/768/main/card/cadet-background.png",
+    "/LeaderBoardMaster/768/main/card/cadet.png",
+    "/LeaderBoardMaster/768/main/card/gold-background.png",
+    "/LeaderBoardMaster/768/main/card/gold.png",
+    "/LeaderBoardMaster/768/main/card/silver-background.png",
+    "/LeaderBoardMaster/768/main/card/silver.png",
+    "/LeaderBoardMaster/768/main/gray-line-arrow-down.svg",
+    "/LeaderBoardMaster/header/banner.jpg",
+    "/LeaderBoardMaster/header/bronze-star.png",
+    "/LeaderBoardMaster/header/gold-star.png",
+    "/LeaderBoardMaster/header/share-black.png",
+    "/LeaderBoardMaster/header/share.png",
+    "/LeaderBoardMaster/header/silver-star.png",
+    "/LeaderBoardMaster/icon/arrow-right.svg",
+    "/LeaderBoardMaster/icon/profit-gray.svg",
+    "/LeaderBoardMaster/icon/profit.svg",
+    "/LeaderBoardMaster/icon/star_number_",
+    "/LeaderBoardMaster/icon/yellow-arrow-down.svg",
+    "/api-management",
+    "/api.ffbbbdc6d3c353211fe2ba39c9f744cd.com/p/front",
+    "/api.ffbbbdc6d3c353211fe2ba39c9f744cd.com/p/front-testnet",
+    "/api/",
+    "/api/15/batch/?sentry_key=0x",
+    "/api/basic/symbol_list_all",
+    "/api/basic/symbol_list_v2",
+    "/api/basic/symbol_list_v3",
+    "/api/v1/client/trace/sampling",
+    "/api/v1/client/trace/sampling?projectId=",
+    "/api/v2/abtest/online/results?project-key=04998C9B84A38A7D810A5ADAF48229BA568BF954",
+    "/api/v2/abtest/online/results?project-key=E1495F5FC222C591662AA2A5131BE697A4ADE442",
+    "/apiv2/click/add",
+    "/copyTrade",
+    "/copyTrade/trade-center/detail?leaderMark=",
+    "/copy_trade/profile?leaderMark=",
+    "/leaderboard-info",
+    "/leaderboard-master",
+    "/leaderboard-master-984f0019a50df4a2.js",
+    "/leaderboard-share",
+    "http://www.metatrader4.com",
+    "https://api.ffbbbdc6d3c353211fe2ba39c9f744cd.com/p/front",
+    "https://api.ffbbbdc6d3c353211fe2ba39c9f744cd.com/p/front-testnet",
+    "https://fonts.googleapis.com/css",
+    "https://monitor-frontend-collector.byoresvc.com/api/15/batch/?sentry_key=0x",
+    "https://monitor-frontend-collector.ffbbbdc6d3c353211fe2ba39c9f744cd.com/api/15/batch/?sentry_key=0x",
+    "https://sc-abtest.ffe390afd658c19dcbf707e0597b846d.de/api/v2/abtest/online/results?project-key=04998C9B84A38A7D810A5ADAF48229BA568BF954",
+    "https://sc-abtest.ffe390afd658c19dcbf707e0597b846d.de/api/v2/abtest/online/results?project-key=E1495F5FC222C591662AA2A5131BE697A4ADE442",
+    "https://www.bybit.com/en/help-center/article/User-Agreement-Bybit-Metatrader-5-MT5"
+  ],
+  "asset_findings": [
+    {
+      "api_urls": [
+        "https://api.ffbbbdc6d3c353211fe2ba39c9f744cd.com/p/front",
+        "https://api.ffbbbdc6d3c353211fe2ba39c9f744cd.com/p/front-testnet",
+        "/api.ffbbbdc6d3c353211fe2ba39c9f744cd.com/p/front",
+        "/api.ffbbbdc6d3c353211fe2ba39c9f744cd.com/p/front-testnet"
+      ],
+      "asset": "https://www.bybit.com/common-static/fhs/compliance-upload/low-cache/compliance-sdk/fbu-activity-frontend.js?v=1",
+      "bytes": 42153,
+      "strings": [
+        ")};e.zLinearPositionMargin=function(e){var t=e||",
+        "===Ue()?Pe.IOS:Pe.ANDROID:Pe.PC:null!=e?e:Ne()?",
+        "android",
+        "android_tg"
+      ]
+    },
+    {
+      "api_urls": [],
+      "asset": "https://www.bybit.com/common-static/fhs/react.18.2.0.min-860f1d37ec17b010c94069b99a49ae7b.js",
+      "bytes": 142619,
+      "strings": [
+        "CompositionEvent",
+        "compositionend",
+        "compositionend focusout keydown keypress keyup mousedown",
+        "compositionstart",
+        "compositionstart focusout keydown keypress keyup mousedown",
+        "compositionupdate",
+        "compositionupdate focusout keydown keypress keyup mousedown",
+        "copy",
+        "onCompositionEnd",
+        "onCompositionStart",
+        "onCompositionUpdate"
+      ]
+    },
+    {
+      "api_urls": [
+        "/api-management"
+      ],
+      "asset": "https://www.bybit.com/common-static/infra-static/by-globals/by-globals.latest.js",
+      "bytes": 128654,
+      "strings": []
+    },
+    {
+      "api_urls": [
+        "/api/basic/symbol_list_all",
+        "/api/basic/symbol_list_v2",
+        "/api/basic/symbol_list_v3"
+      ],
+      "asset": "https://www.bybit.com/common-static/infra-static/by-vendors/by-vendors.latest.js",
+      "bytes": 186905,
+      "strings": [
+        "),o=n,n=t,t=s[1]),this.addNamespaces(t);let a=Cu(this.data,s)||{};i.skipCopy||(n=JSON.parse(JSON.stringify(n))),o?$u(a,n,r):a={...a,...n},Du(this.data,s,a),i.silent||this.emit(",
+        ",e,t,n)}addResourceBundle(e,t,n,o,r,i={silent:!1,skipCopy:!1}){let s=[e,t];e.indexOf(",
+        ",maxPrice:0,minPrice:0,maxQty:0,minQty:0,balanceFraction:4,upnlFraction:4,priceScale:4,tickSize:0,tickSizeFraction:0,priceStep:0,priceFraction:0,lotStep:0,lotSize:0,lotFraction:0,obDepthMergeTimes:",
+        ",upnlf:",
+        "===e?wt.IOS:wt.ANDROID:wt.PC}return null!==e&&void 0!==e?e:vt()?",
+        "android",
+        "android_tg",
+        "supportCopyTrade"
+      ]
+    },
+    {
+      "api_urls": [
+        "https://sc-abtest.ffe390afd658c19dcbf707e0597b846d.de/api/v2/abtest/online/results?project-key=E1495F5FC222C591662AA2A5131BE697A4ADE442",
+        "https://sc-abtest.ffe390afd658c19dcbf707e0597b846d.de/api/v2/abtest/online/results?project-key=04998C9B84A38A7D810A5ADAF48229BA568BF954",
+        "/api/v2/abtest/online/results?project-key=E1495F5FC222C591662AA2A5131BE697A4ADE442",
+        "/api/v2/abtest/online/results?project-key=04998C9B84A38A7D810A5ADAF48229BA568BF954",
+        "/apiv2/click/add"
+      ],
+      "asset": "https://www.bybit.com/common-static/infra-static/data-core/data-core.latest.min.js",
+      "bytes": 215845,
+      "strings": [
+        ")),void(this.data.app_key&&(this.data.android_info&&this.data.android_info.url_schemes&&(this.data.android_info.url_schemes+=",
+        "),e});Vr=mi().hidden;var vi,yi,wi,bi,Si,ki,Oi,Pi,xi={android:/Android/i,iOS:/iPhone|iPad|iPod/i},Ti=function(){for(var e in xi)if(navigator.userAgent.match(xi[e]))return e;return",
+        "---test---app_js_bridge is not configured, data will not be sent by android bridge.",
+        "===rn.para.heatmap.element_selector);var r=rn.heatmap.getElementPosition(e,n.$element_path,rn.para.heatmap&&",
+        "Android obsolete bridge inits succeed.",
+        "Android或者iOS，没有暴露相应方法",
+        "Android校验server_url失败",
+        "H5 校验 Android server_url 失败",
+        "android",
+        "android_tg",
+        "app_js_bridge is not configured, data will not be sent by android obsolete bridge.",
+        "},platform_type:(je=navigator.userAgent,Ne=/(?:Android)/.test(je),Ce=/(?:Firefox)/.test(je),Ie=/(?:iPad|PlayBook)/.test(je)||Ne&&!/(?:Mobile)/.test(je)||Ce&&/(?:Tablet)/.test(je),/(?:iPhone)/.test(je)&&!Ie||Ne?",
+        "不支持当前系统，目前只支持Android和iOS"
+      ]
+    },
+    {
+      "api_urls": [
+        "https://monitor-frontend-collector.ffbbbdc6d3c353211fe2ba39c9f744cd.com/api/15/batch/?sentry_key=0x",
+        "https://monitor-frontend-collector.byoresvc.com/api/15/batch/?sentry_key=0x",
+        "/api/15/batch/?sentry_key=0x",
+        "/api/15/batch/?sentry_key=0x",
+        "/api/v1/client/trace/sampling?projectId=",
+        "/api/",
+        "/api/v1/client/trace/sampling"
+      ],
+      "asset": "https://www.bybit.com/common-static/infra-static/monitor/monitor.latest.js?id=63",
+      "bytes": 84161,
+      "strings": []
+    },
+    {
+      "api_urls": [],
+      "asset": "https://www.bybit.com/future-activity/_next/static/chunks/1033-9096c101d6a3d73f.js",
+      "bytes": 7740,
+      "strings": []
+    },
+    {
+      "api_urls": [],
+      "asset": "https://www.bybit.com/future-activity/_next/static/chunks/3290-d8cee0909df4820c.js",
+      "bytes": 146215,
+      "strings": [
+        "),o.popupClassName),visible:f,position:",
+        ").concat(t.position))}))},Hr=Object.assign({},Kn),qr=Hr.version,Zr=Hr.render,Kr=Hr.unmountComponentAtNode;try{Number((qr||",
+        ")},c),s().createElement(la,null,r))))},ya=[];function ba(t){Jr(t)&&t.parentNode&&t.parentNode.removeChild(t)}var wa={duration:2e3,position:",
+        ")},e.cancelText)))),e.safeArea&&s().createElement(Br,{position:",
+        ",Ir={position:",
+        "===e.position?",
+        "]},ga=function(t){var e=g(va,t),n=e.maskClickable,r=e.content,o=e.icon,i=e.position,c=(0,a.useMemo)((function(){if(null===o||void 0===o)return null;switch(o){case"
+      ]
+    },
+    {
+      "api_urls": [],
+      "asset": "https://www.bybit.com/future-activity/_next/static/chunks/406-82296a6398780734.js",
+      "bytes": 23845,
+      "strings": [
+        "),q={position:",
+        ",(0,r.Z)({ref:me,style:(0,o.Z)((0,o.Z)({},Y),{},{position:",
+        ":h,position:x?",
+        "position",
+        "},J={position:"
+      ]
+    },
+    {
+      "api_urls": [
+        "https://fonts.googleapis.com/css"
+      ],
+      "asset": "https://www.bybit.com/future-activity/_next/static/chunks/4060-0350562608e6e75b.js",
+      "bytes": 94022,
+      "strings": [
+        ")]=!0),(0,s.jsx)(i,{...o,ref:r})}));return r.displayName=`Primitive.${t}`,{...e,[t]:r}}),{});var K=i.forwardRef(((e,t)=>(0,s.jsx)(H.span,{...e,ref:t,style:{position:",
+        ":!0,tabIndex:0},o),{},{ref:t,style:{position:",
+        "bg-position",
+        "copy",
+        "list-style-position",
+        "object-position",
+        "position"
+      ]
+    },
+    {
+      "api_urls": [
+        "/leaderboard-info",
+        "/leaderboard-share",
+        "/LeaderBoardMaster/header/share-black.png"
+      ],
+      "asset": "https://www.bybit.com/future-activity/_next/static/chunks/5746-0c8fe150e8d522ce.js",
+      "bytes": 12921,
+      "strings": [
+        "),e.style.position=",
+        ").concat(a))},i=function(e){var n=e.rankingForm,t=e.period,a=e.endTimeE3;return(0,o.U2)(",
+        ")},r=function(e){var n=e.rankingType,t=e.period,a=e.endTimeE3;return(0,o.U2)("
+      ]
+    },
+    {
+      "api_urls": [],
+      "asset": "https://www.bybit.com/future-activity/_next/static/chunks/5773-867d3ebe68a52143.js",
+      "bytes": 44444,
+      "strings": [
+        ")&&(t.style.position=",
+        ");t.style.position=",
+        "===o.compatMode&&i||r&&r[n]||i}}));var pt={position:",
+        "position"
+      ]
+    },
+    {
+      "api_urls": [],
+      "asset": "https://www.bybit.com/future-activity/_next/static/chunks/6354-6b19efea1479b78f.js",
+      "bytes": 45049,
+      "strings": [
+        ");C.current=t},onInputCompositionStart:function(){r.current=!0},onInputCompositionEnd:function(e){r.current=!1,"
+      ]
+    },
+    {
+      "api_urls": [],
+      "asset": "https://www.bybit.com/future-activity/_next/static/chunks/8210-656a81313ba547fd.js",
+      "bytes": 12019,
+      "strings": [
+        "position"
+      ]
+    },
+    {
+      "api_urls": [],
+      "asset": "https://www.bybit.com/future-activity/_next/static/chunks/8446-fc9e82920ac9a8d5.js",
+      "bytes": 14001,
+      "strings": []
+    },
+    {
+      "api_urls": [],
+      "asset": "https://www.bybit.com/future-activity/_next/static/chunks/9430-5e9cf829ebc77b31.js",
+      "bytes": 31572,
+      "strings": []
+    },
+    {
+      "api_urls": [],
+      "asset": "https://www.bybit.com/future-activity/_next/static/chunks/ff5b377a-1ac4d6131420ef1c.js",
+      "bytes": 14946,
+      "strings": []
+    },
+    {
+      "api_urls": [],
+      "asset": "https://www.bybit.com/future-activity/_next/static/chunks/framework-bc3028070a31e294.js",
+      "bytes": 804,
+      "strings": []
+    },
+    {
+      "api_urls": [],
+      "asset": "https://www.bybit.com/future-activity/_next/static/chunks/main-1cdb994eddcb6c64.js",
+      "bytes": 87744,
+      "strings": [
+        ",padding:0,position:"
+      ]
+    },
+    {
+      "api_urls": [
+        "/copyTrade",
+        "/LeaderBoardMaster/header/share.png",
+        "/LeaderBoardMaster/icon/star_number_",
+        "/LeaderBoardMaster/icon/star_number_",
+        "/copyTrade/trade-center/detail?leaderMark=",
+        "/copy_trade/profile?leaderMark=",
+        "/leaderboard-master"
+      ],
+      "asset": "https://www.bybit.com/future-activity/_next/static/chunks/pages/%5BbasePath%5D/%5Blocale%5D/leaderboard-master-984f0019a50df4a2.js",
+      "bytes": 76045,
+      "strings": [
+        ").concat(c.Tj)}),i===c.Jg.RANKING_FORM_TRADERS_PNL?(0,I.jsx)(",
+        ").concat(c.Tj)}),r===c.Jg.RANKING_FORM_TRADERS_PNL?(0,I.jsx)(",
+        ")}),i===c.Jg.RANKING_FORM_TRADERS_PNL?(0,I.jsx)(",
+        ")}),r===c.Jg.RANKING_FORM_TRADERS_PNL?(0,I.jsx)(",
+        ")}})})]})]}),(0,I.jsx)(X,{activeType:a,typeTraderList:t,jumpToProfilePage:i,handleTraderInfoSensor:d},a)]})})},te=r(59499),ne=P.ZP.div.withConfig({displayName:",
+        ",(0,B.kO)(Number(null===r||void 0===r?void 0:r.traderPnlData))),children:",
+        ",(0,B.kO)(Number(null===t||void 0===t?void 0:t.traderPnlData))),children:",
+        ",leader_id:e,rank:a,page_name:document&&document.title||window.location.href,tag_id:Z===c.Jg.RANKING_FORM_TRADERS_PNL?",
+        ",onClick:function(){return m(null===r||void 0===r?void 0:r.leaderMark,null===r||void 0===r?void 0:r.ranking,null===r||void 0===r?void 0:r.leaderUserId)},children:[(0,I.jsx)(",
+        ",onClick:function(){return m(null===r||void 0===r?void 0:r.leaderMark,null===r||void 0===r?void 0:r.ranking,null===r||void 0===r?void 0:r.leaderUserId)},children:o(",
+        ",onClick:function(){return m(null===t||void 0===t?void 0:t.leaderMark,null===t||void 0===t?void 0:t.ranking,null===t||void 0===t?void 0:t.leaderUserId)},children:[(0,I.jsx)(",
+        ",onClick:function(){return m(null===t||void 0===t?void 0:t.leaderMark,null===t||void 0===t?void 0:t.ranking,null===t||void 0===t?void 0:t.leaderUserId)},children:o(",
+        ",ref:E,children:(0,I.jsx)(oe,{activeType:o,leaderListLine:M,jumpToProfilePage:m,handleTraderInfoSensor:g},o)}),(0,I.jsx)(",
+        ",ref:S,children:(0,I.jsx)(oe,{activeType:o,leaderListLine:D,jumpToProfilePage:m,handleTraderInfoSensor:g},o)}),(0,I.jsx)(",
+        ",ref:j,children:(0,I.jsx)(oe,{activeType:o,leaderListLine:z,jumpToProfilePage:m,handleTraderInfoSensor:g},o)})]}),N&&(0,I.jsx)(ge,{})]})},we=(0,P.vJ)([",
+        ",ref:k,children:(0,I.jsx)(oe,{activeType:o,leaderListLine:G,jumpToProfilePage:m,handleTraderInfoSensor:g},o)}),(0,I.jsx)(",
+        ",src:null===r||void 0===r?void 0:r.leaderProfilePhoto}),(null===r||void 0===r?void 0:r.countryCode)&&(0,I.jsx)(",
+        ",src:null===t||void 0===t?void 0:t.leaderProfilePhoto}),(null===t||void 0===t?void 0:t.countryCode)&&(0,I.jsx)(",
+        ",userId:e===c.Jg.RANKING_FORM_TRADERS_PNL?",
+        ".concat((0,B.s6)(Number(null===r||void 0===r?void 0:r.aum),2,!1),",
+        ".concat((0,B.s6)(Number(null===r||void 0===r?void 0:r.traderPnlData),2),",
+        ".concat((0,B.s6)(Number(null===t||void 0===t?void 0:t.aum),2,!1),",
+        ".concat((0,B.s6)(Number(null===t||void 0===t?void 0:t.traderPnlData),2),",
+        ".concat(a+1),children:_})]}),(null===r||void 0===r?void 0:r.leaderProfilePhoto)&&(0,I.jsxs)(",
+        ".concat(a+1),children:_})]}),(null===t||void 0===t?void 0:t.leaderProfilePhoto)&&(0,I.jsxs)(",
+        "CopyTradingLeaderboardTabClick",
+        "FBUCopyTrading",
+        "]),U=function(e){var a=e.index,r=e.activeType,t=e.leaderItem,n=e.jumpToProfilePage,i=e.handleTraderInfoSensor,d=(0,p.$G)(",
+        "]),ie=function(e){var a=e.index,r=e.leaderItem,t=e.jumpToProfilePage,n=e.handleTraderInfoSensor,i=e.activeType,d=(0,p.$G)(",
+        "],c.rf,c.rf,c.rf),V=r(11163),X=function(e){var a=e.typeTraderList,r=e.activeType,t=e.jumpToProfilePage,n=e.handleTraderInfoSensor,i=(0,p.$G)(",
+        "],c.rf,c.rf,c.rf,c.rf,c.rf,c.rf,c.rf,c.rf,c.rf),oe=function(e){var a,r,t=e.leaderListLine,n=e.jumpToProfilePage,i=e.handleTraderInfoSensor,d=e.activeType,o=(0,p.$G)(",
+        "banner__trader-avatar-",
+        "indexstyle__LeaderLevelContainer",
+        "leader-board-banner__dropdown-option",
+        "leader-board-banner__dropdown-option-active",
+        "leader-board-main__container",
+        "leader-board-master__arrow-lf-icon",
+        "leader-board-master__arrow-rt-bg",
+        "leader-board-master__arrow-rt-icon",
+        "leader-board-master__card-box-main-expand",
+        "leader-board-master__disable-arrow-lf-bg",
+        "leader-board-master__disable-arrow-lf-icon",
+        "leader-board-master__disable-arrow-rt-bg",
+        "leader-board-master__disable-arrow-rt-icon",
+        "leader-board-master__hide-all",
+        "leader-board-master__list-expand",
+        "leader-board-master__list-header-",
+        "leader-board-master__list-header-icon leader-board-master__list-header-",
+        "leader-board-master__mask-lf",
+        "leader-board-master__mask-rt",
+        "leader-board-master__show-more",
+        "leader-board-master__view-box-nextPage",
+        "leader-board__footer",
+        "leader-board__header",
+        "leader-board__layout",
+        "leader-level__arrow-up",
+        "leader-level__icon-",
+        "leaderBoardFollowersProfitsBtn",
+        "leaderBoardTraderNavDesc",
+        "leaderBoardTraderNavKeyword",
+        "leaderBoardTraderNavTitle",
+        "leaderBoardTradersPnlBtn",
+        "leaderBoardTradersShowMore",
+        "s PNL",
+        "}),3===(null===r||void 0===r?void 0:r.length)&&r.map((function(e){var a=e.ranking,r=e.leaderProfilePhoto,t=e.leaderNickname,n=e.leaderMark,i=e.leaderUserId;return(0,I.jsxs)(",
+        "}),d===c.Jg.RANKING_FORM_FOLLOWERS_PROFITS&&(0,I.jsx)(",
+        "})}(d)},children:[d===c.Jg.RANKING_FORM_TRADERS_PNL&&(0,I.jsx)("
+      ]
+    }
+  ],
+  "asset_urls": [
+    "https://www.bybit.com/common-static/fhs/compliance-upload/low-cache/compliance-sdk/fbu-activity-frontend.js?v=1",
+    "https://www.bybit.com/common-static/fhs/react.18.2.0.min-860f1d37ec17b010c94069b99a49ae7b.js",
+    "https://www.bybit.com/common-static/infra-static/by-globals/by-globals.latest.js",
+    "https://www.bybit.com/common-static/infra-static/by-vendors/by-vendors.latest.js",
+    "https://www.bybit.com/common-static/infra-static/data-core/data-core.latest.min.js",
+    "https://www.bybit.com/common-static/infra-static/monitor/monitor.latest.js?id=63",
+    "https://www.bybit.com/future-activity/_next/static/chunks/1033-9096c101d6a3d73f.js",
+    "https://www.bybit.com/future-activity/_next/static/chunks/3290-d8cee0909df4820c.js",
+    "https://www.bybit.com/future-activity/_next/static/chunks/406-82296a6398780734.js",
+    "https://www.bybit.com/future-activity/_next/static/chunks/4060-0350562608e6e75b.js",
+    "https://www.bybit.com/future-activity/_next/static/chunks/5746-0c8fe150e8d522ce.js",
+    "https://www.bybit.com/future-activity/_next/static/chunks/5773-867d3ebe68a52143.js",
+    "https://www.bybit.com/future-activity/_next/static/chunks/6354-6b19efea1479b78f.js",
+    "https://www.bybit.com/future-activity/_next/static/chunks/8210-656a81313ba547fd.js",
+    "https://www.bybit.com/future-activity/_next/static/chunks/8446-fc9e82920ac9a8d5.js",
+    "https://www.bybit.com/future-activity/_next/static/chunks/9430-5e9cf829ebc77b31.js",
+    "https://www.bybit.com/future-activity/_next/static/chunks/ff5b377a-1ac4d6131420ef1c.js",
+    "https://www.bybit.com/future-activity/_next/static/chunks/framework-bc3028070a31e294.js",
+    "https://www.bybit.com/future-activity/_next/static/chunks/main-1cdb994eddcb6c64.js",
+    "https://www.bybit.com/future-activity/_next/static/chunks/pages/%5BbasePath%5D/%5Blocale%5D/leaderboard-master-984f0019a50df4a2.js",
+    "https://www.bybit.com/future-activity/_next/static/chunks/pages/_app-aa8c8f72c82e5cab.js",
+    "https://www.bybit.com/future-activity/_next/static/chunks/polyfills-5cd94c89d3acac5f.js",
+    "https://www.bybit.com/future-activity/_next/static/chunks/webpack-fd20d5809c6ebbcc.js",
+    "https://www.bybit.com/future-activity/_next/static/fbXHIAKek9Ldvo0z_dgws/_buildManifest.js",
+    "https://www.bybit.com/future-activity/_next/static/fbXHIAKek9Ldvo0z_dgws/_middlewareManifest.js",
+    "https://www.bybit.com/future-activity/_next/static/fbXHIAKek9Ldvo0z_dgws/_ssgManifest.js"
+  ],
+  "html_bytes": 515091,
+  "next_data_keys": [
+    "assetPrefix",
+    "buildId",
+    "customServer",
+    "gsp",
+    "isFallback",
+    "page",
+    "props",
+    "query",
+    "scriptLoader"
+  ],
+  "text_sample": "Top Master Traders to Follow | Leaderboard | Bybit Copy Trading Share Back to Copy Trading Copy Trading Leaderboard Master Traders Share Master's P&L Followers' P&L Date: -- No Records No Records No Records No Records Date: -- Master's P&L Followers' P&L No Records No Records No Records No Records",
+  "title": "Top Master Traders to Follow | Leaderboard | Bybit Copy Trading"
+}

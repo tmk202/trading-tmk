@@ -1,0 +1,95 @@
+/Users/alice/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+=== HYPERLIQUID REALTIME TRACKER ===
+Wallets:     10
+Source:      /Users/alice/Documents/nnt/CODE/trading-tmk/data/copy_trade/hyperliquid_hot_wallets.csv
+Interval:    3.0s
+State:       /Users/alice/Documents/nnt/CODE/trading-tmk/data/copy_trade/hyperliquid_tracker_state.json
+Positions:   /Users/alice/Documents/nnt/CODE/trading-tmk/data/copy_trade/hyperliquid_position_events.csv
+Fills:       /Users/alice/Documents/nnt/CODE/trading-tmk/data/copy_trade/hyperliquid_fill_events.csv
+
+[2026-06-11T10:35:52+00:00] 0xb83de012 OPEN     SHORT APE      0->-0.1 uPnL=0.00 liq=189421331.04
+[2026-06-11T10:35:52+00:00] 0xb83de012 OPEN     LONG  ASTER    0->3229 uPnL=-1491.32 liq=-
+[2026-06-11T10:35:52+00:00] 0xb83de012 OPEN     SHORT AVAX     0->-0.03 uPnL=0.09 liq=661471320.85
+[2026-06-11T10:35:52+00:00] 0xb83de012 OPEN     LONG  BTC      0->0.59799 uPnL=-5424.84 liq=-
+[2026-06-11T10:35:52+00:00] 0xb83de012 OPEN     SHORT DOGE     0->-1 uPnL=0.02 liq=19844139.51
+[2026-06-11T10:36:09+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:36:25+00:00] hl_error wallet=0x218a65e2 Hyperliquid API failed for userFillsByTime: HTTP 429 rate limited for userFillsByTime
+[2026-06-11T10:36:27+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:36:42+00:00] hl_error wallet=0x0e61a8fb Hyperliquid API failed for userFillsByTime: HTTP 429 rate limited for userFillsByTime
+[2026-06-11T10:36:53+00:00] hl_error wallet=0x2d23b731 Hyperliquid API failed for clearinghouseState: HTTP 429 rate limited for clearinghouseState
+[2026-06-11T10:36:30+00:00] 0xb83de012 Close Short    xyz:GOLD px=4091.70 size=0.40 closedPnL=213.77
+[2026-06-11T10:37:04+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:37:12+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:37:20+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:37:21+00:00] 0xb83de012 Close Short    xyz:GOLD px=4091.70 size=0.21 closedPnL=114.72
+[2026-06-11T10:37:22+00:00] 0xb83de012 Close Short    xyz:GOLD px=4091.70 size=0.11 closedPnL=57.36
+[2026-06-11T10:37:37+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:37:45+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:37:48+00:00] 0xb83de012 Close Short    xyz:GOLD px=4091.70 size=0.51 closedPnL=275.13
+[2026-06-11T10:37:49+00:00] 0xb83de012 Close Short    xyz:GOLD px=4091.70 size=1.22 closedPnL=660.43
+[2026-06-11T10:37:50+00:00] 0xb83de012 Close Short    xyz:GOLD px=4091.70 size=1.22 closedPnL=660.70
+[2026-06-11T10:37:51+00:00] 0xb83de012 Close Short    xyz:GOLD px=4091.70 size=1.22 closedPnL=660.70
+[2026-06-11T10:37:52+00:00] 0xb83de012 Close Short    xyz:GOLD px=4091.70 size=0.47 closedPnL=254.96
+[2026-06-11T10:38:09+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:38:11+00:00] 0xb83de012 Close Short    xyz:GOLD px=4091.70 size=0.10 closedPnL=54.06
+[2026-06-11T10:38:16+00:00] 0xb83de012 Close Short    xyz:GOLD px=4094.10 size=0.05 closedPnL=26.91
+[2026-06-11T10:38:16+00:00] 0xb83de012 Close Short    xyz:GOLD px=4094.10 size=0.20 closedPnL=106.62
+[2026-06-11T10:38:16+00:00] 0xb83de012 Close Short    xyz:GOLD px=4094.10 size=0.09 closedPnL=49.52
+[2026-06-11T10:38:16+00:00] 0xb83de012 Close Short    xyz:GOLD px=4094.10 size=0.25 closedPnL=134.45
+[2026-06-11T10:38:16+00:00] 0xb83de012 Close Short    xyz:GOLD px=4094.10 size=0.06 closedPnL=32.62
+[2026-06-11T10:38:33+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:38:42+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:38:50+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:38:57+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:39:06+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:39:15+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:39:24+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:39:32+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:39:39+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:39:48+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:39:56+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:40:04+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:40:12+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:40:20+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:40:28+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:40:35+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:40:43+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:40:51+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:41:00+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:41:08+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:41:16+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:41:25+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:41:33+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:41:41+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:41:49+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:41:57+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:42:05+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:42:13+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:42:21+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:42:30+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:42:38+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:42:46+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:42:54+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:43:01+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:43:08+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:43:16+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:43:24+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:43:31+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:43:39+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:43:46+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:43:54+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:44:01+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:44:09+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:44:17+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:44:24+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:44:32+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:44:40+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:44:47+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:44:54+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:45:03+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:45:10+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:45:19+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:45:27+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:45:35+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
+[2026-06-11T10:45:42+00:00] heartbeat wallets=10 active_positions_wallets=6 events=0
