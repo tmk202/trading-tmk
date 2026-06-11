@@ -10,6 +10,8 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
+import requests
+
 logger = logging.getLogger(__name__)
 
 SOL_MINT = "So11111111111111111111111111111111111111112"
@@ -239,6 +241,122 @@ class CopyTradeExecutor(ABC):
                 "pnl": pnl if pnl is not None else "",
                 "dry_run": str(dry_run),
             })
+
+
+class BinanceFuturesExchange:
+    """Small adapter for Binance USDT-M futures REST API."""
+
+    def __init__(self):
+        from config import Config
+
+        self.api_key = os.getenv("BINANCE_FUTURES_API_KEY") or Config.BINANCE_API_KEY
+        secret = os.getenv("BINANCE_FUTURES_SECRET_KEY") or Config.BINANCE_SECRET_KEY
+        self.secret = secret.encode("utf-8")
+        self.base_url = (
+            "https://testnet.binancefuture.com"
+            if Config.BINANCE_TESTNET
+            else "https://fapi.binance.com"
+        )
+        self.session = requests.Session()
+        self.session.headers.update({"X-MBX-APIKEY": self.api_key})
+        self.markets = self._load_markets()
+        logger.info("Connected to Binance USDT-M Futures (%s)", "TESTNET" if Config.BINANCE_TESTNET else "MAINNET")
+
+    def _symbol(self, symbol: str) -> str:
+        market = self.markets.get(symbol) or self.markets.get(f"{symbol}:USDT")
+        if market:
+            return str(market["id"])
+        return symbol.replace("/", "").replace(":USDT", "")
+
+    def _load_markets(self) -> dict[str, dict[str, Any]]:
+        data = self._public("GET", "/fapi/v1/exchangeInfo")
+        markets: dict[str, dict[str, Any]] = {}
+        for item in data.get("symbols", []):
+            if item.get("quoteAsset") != "USDT" or item.get("contractType") != "PERPETUAL":
+                continue
+            base = item.get("baseAsset")
+            market_id = item.get("symbol")
+            if not base or not market_id:
+                continue
+            step_size = "0.001"
+            for flt in item.get("filters", []):
+                if flt.get("filterType") == "LOT_SIZE":
+                    step_size = flt.get("stepSize") or step_size
+                    break
+            market = {"id": market_id, "base": base, "step_size": step_size}
+            markets[f"{base}/USDT"] = market
+            markets[f"{base}/USDT:USDT"] = market
+        return markets
+
+    def _public(self, method: str, path: str, params: dict[str, Any] | None = None) -> Any:
+        resp = self.session.request(method, f"{self.base_url}{path}", params=params or {}, timeout=20)
+        resp.raise_for_status()
+        return resp.json()
+
+    def _signed(self, method: str, path: str, params: dict[str, Any] | None = None) -> Any:
+        import hashlib
+        import hmac
+        from urllib.parse import urlencode
+
+        payload = dict(params or {})
+        payload.setdefault("recvWindow", 10000)
+        payload["timestamp"] = int(time.time() * 1000)
+        query = urlencode(payload, doseq=True)
+        signature = hmac.new(self.secret, query.encode("utf-8"), hashlib.sha256).hexdigest()
+        payload["signature"] = signature
+        resp = self.session.request(method, f"{self.base_url}{path}", params=payload, timeout=20)
+        resp.raise_for_status()
+        return resp.json()
+
+    def fetch_balance(self) -> dict:
+        data = self._signed("GET", "/fapi/v2/account")
+        out: dict[str, dict[str, float]] = {}
+        for asset in data.get("assets", []):
+            name = asset.get("asset")
+            if not name:
+                continue
+            out[name] = {
+                "free": float(asset.get("availableBalance") or 0),
+                "total": float(asset.get("walletBalance") or 0),
+            }
+        return out
+
+    def get_free_balance(self, currency: str) -> float:
+        balance = self.fetch_balance()
+        return float(balance.get(currency, {}).get("free", 0))
+
+    def get_ticker(self, symbol: str) -> dict:
+        data = self._public("GET", "/fapi/v1/ticker/price", {"symbol": self._symbol(symbol)})
+        return {"last": float(data["price"])}
+
+    def _amount_to_precision(self, symbol: str, amount: float) -> float:
+        from decimal import Decimal, ROUND_DOWN
+
+        market = self.markets.get(symbol) or self.markets.get(f"{symbol}:USDT")
+        step = Decimal(str((market or {}).get("step_size", "0.001")))
+        value = Decimal(str(amount))
+        return float((value / step).to_integral_value(rounding=ROUND_DOWN) * step)
+
+    def create_market_order(
+        self,
+        side: str,
+        amount: float,
+        symbol: str,
+        reduce_only: bool = False,
+    ) -> dict:
+        order_symbol = self._symbol(symbol)
+        precise_amount = self._amount_to_precision(symbol, amount)
+        params: dict[str, Any] = {
+            "symbol": order_symbol,
+            "side": side.upper(),
+            "type": "MARKET",
+            "quantity": f"{precise_amount:.12f}".rstrip("0").rstrip("."),
+        }
+        if reduce_only:
+            params["reduceOnly"] = "true"
+        logger.info("Placing FUTURES %s order: %s %.6f reduce_only=%s",
+                    side.upper(), order_symbol, precise_amount, reduce_only)
+        return self._signed("POST", "/fapi/v1/order", params)
 
 
 class BinanceCopyExecutor(CopyTradeExecutor):
@@ -747,6 +865,53 @@ class HyperliquidCopyExecutor(BinanceCopyExecutor):
         self.trusted_wallets_csv = trusted_wallets_csv
         self.copy_state_path = os.path.join(self.data_dir, "hyperliquid_copy_state.json")
         self._processed_sigs.update(self._load_processed_state())
+
+    def _init_exchange(self) -> None:
+        if self.exchange is not None:
+            return
+        if self.dry_run:
+            return
+        try:
+            self.exchange = BinanceFuturesExchange()
+            balance = self.exchange.fetch_balance()
+            usdt = float(balance.get("USDT", {}).get("free", 0))
+            logger.info("Binance futures connected. USDT futures balance: %.2f", usdt)
+        except Exception as exc:
+            logger.warning("Binance futures init failed: %s", exc)
+
+    def close_position(self, symbol: str) -> bool:
+        pos = self.active_positions.get(symbol)
+        if not pos:
+            return False
+        close_side = "sell" if pos["side"] == "buy" else "buy"
+
+        if self.dry_run:
+            logger.info("[DRY-RUN] FUTURES CLOSE %s %s", close_side.upper(), symbol)
+            self._log_trade("close_dry", symbol, close_side, None, 0,
+                            "hyperliquid", symbol.split("/")[0], dry_run=True)
+            self.active_positions.pop(symbol, None)
+            return True
+
+        self._init_exchange()
+        if self.exchange is None:
+            return False
+
+        try:
+            amount = float(pos.get("amount") or 0)
+            if amount <= 0:
+                logger.warning("No tracked futures amount to close for %s", symbol)
+                self.active_positions.pop(symbol, None)
+                return False
+            order = self.exchange.create_market_order(close_side, amount, symbol, reduce_only=True)
+            self.active_positions.pop(symbol, None)
+            logger.info("FUTURES CLOSED %s %s %.6f", close_side.upper(), symbol, amount)
+            self._log_trade("close", symbol, close_side, None, 0,
+                            "hyperliquid", symbol.split("/")[0],
+                            tx_id=str(order.get("id", "")), dry_run=False)
+            return True
+        except Exception as exc:
+            logger.error("Futures close failed %s: %s", symbol, exc)
+            return False
 
     def collect_signals(self) -> list[TradeSignal]:
         position_signals = self._collect_hyperliquid_position_signals()
