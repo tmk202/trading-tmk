@@ -1,1 +1,1 @@
-worker: python main_copy_trade.py --dry-run --interval 15
+web: bash start.sh
