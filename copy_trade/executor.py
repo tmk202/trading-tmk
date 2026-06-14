@@ -136,11 +136,15 @@ class CopyTradeExecutor(ABC):
 
     def _check_stop_loss(self, symbol: str) -> None:
         pos = self.active_positions.get(symbol)
-        if not pos or self.dry_run:
+        if not pos:
             return
         entry = pos.get("entry_price")
         if not entry:
-            return
+            if self.dry_run:
+                signal = pos.get("signal")
+                entry = signal.entry_price if signal else None
+            if not entry:
+                return
         side = pos["side"]
         try:
             current = self._get_current_price(symbol)
@@ -400,12 +404,9 @@ class BinanceCopyExecutor(CopyTradeExecutor):
             logger.warning("Binance init failed (dry-run will simulate): %s", exc)
 
     def collect_signals(self) -> list[TradeSignal]:
-        # Ưu tiên 1: Copy realtime từ wallet_trade_events (ví mua/bán SOL)
-        copy_signals = self._collect_wallet_copy_signals()
-        if copy_signals:
-            return copy_signals
-
-        # Ưu tiên 2: Macro sentiment từ snapshot OKX
+        signals = self._collect_wallet_copy_signals()
+        if signals:
+            return signals
         return self._collect_macro_sentiment()
 
     def _collect_wallet_copy_signals(self) -> list[TradeSignal]:
@@ -418,102 +419,124 @@ class BinanceCopyExecutor(CopyTradeExecutor):
         selected = {row.get("wallet", "") for row in selection} if selection else {}
 
         now = datetime.now(timezone.utc)
-        cutoff = now.timestamp() - 600
+        cutoff = now.timestamp() - 43200
 
-        signals: list[TradeSignal] = []
-        seen_actions: dict[str, list[dict[str, str]]] = {}
-        recent_count = 0
-        near_count = 0
+        symbol_actions: dict[str, list[dict[str, str]]] = {}
         for row in reversed(events):
-            wallet = row.get("wallet", "")
             sig = row.get("signature", "")
-            action = row.get("action", "")
-            block_time_str = row.get("block_time", "")
-
             if sig in self._processed_sigs:
                 continue
+
+            action = row.get("action", "")
             if action not in ("buy", "sell"):
                 continue
 
-            block_ts = _parse_iso_to_ts(block_time_str)
-            if block_ts is None:
-                continue
-
-            age_m = (now.timestamp() - block_ts) / 60
-            recent_count += 1
-
-            if block_ts < cutoff:
-                continue
-
-            # Chỉ copy từ wallet đã chọn (trusted)
+            wallet = row.get("wallet", "")
             if selected and wallet not in selected:
                 continue
 
-            near_count += 1
-            self._processed_sigs.add(sig)
-            seen_actions.setdefault(wallet, []).append(row)
+            block_ts = _parse_iso_to_ts(row.get("block_time", ""))
+            if block_ts is None or block_ts < cutoff:
+                continue
 
-        for s in signals:
-            logger.info("Wallet copy: %s SOL/USDT $%.0f (%.0f%% conf) from %d wallet(s)",
-                         s.side.upper(), s.size_usd, s.confidence * 100, len(seen_actions))
+            source_symbol = row.get("token_symbol", "").upper()
+            binance_symbol = SYMBOL_MAP.get(source_symbol, "")
+            if not binance_symbol:
+                continue
+
+            self._processed_sigs.add(sig)
+            symbol_actions.setdefault(source_symbol, []).append(row)
+
+        signals: list[TradeSignal] = []
+        for source_symbol, rows in symbol_actions.items():
+            buys = sum(1 for r in rows if r.get("action") == "buy")
+            sells = sum(1 for r in rows if r.get("action") == "sell")
+            total = buys + sells
+            if total == 0:
+                continue
+
+            buy_ratio = buys / total
+            sell_ratio = sells / total
+            confidence = max(buy_ratio, sell_ratio)
+            if confidence < self.min_confidence:
+                continue
+
+            side = "buy" if buy_ratio >= sell_ratio else "sell"
+            binance_symbol = SYMBOL_MAP.get(source_symbol, "")
+            wallets = {r.get("wallet") for r in rows}
+
+            signals.append(TradeSignal(
+                symbol=binance_symbol,
+                side=side,
+                confidence=confidence,
+                source="wallet_copy",
+                source_symbol=source_symbol,
+                trader_count=len(wallets),
+                size_usd=self.position_size_usd,
+            ))
+
+            logger.info("Wallet copy: %s %s (→%s) $%.0f (%.0f%% conf, %d wallets, %d events)",
+                         side.upper(), source_symbol, binance_symbol, self.position_size_usd,
+                         confidence * 100, len(wallets), total)
 
         return signals
 
     def _collect_macro_sentiment(self) -> list[TradeSignal]:
         selection = self._load_csv("wallet_selection.csv")
-        positions = self._load_csv("trader_positions.csv")
-
-        if not selection or not positions:
-            logger.debug("Need wallet_selection.csv and trader_positions.csv for macro signal")
+        if not selection:
             return []
 
         selected_wallets = {row.get("wallet", "") for row in selection if row.get("wallet")}
 
-        wallet_direction: dict[str, str] = {}
-        for pos in positions:
-            wallet = pos.get("trader_id", "")
+        perf = self._load_csv("wallet_performance.csv")
+        if not perf:
+            return []
+
+        long_count = 0
+        short_count = 0
+        token_signals: dict[str, dict[str, int]] = {}
+        for row in perf:
+            wallet = row.get("wallet", "")
             if wallet not in selected_wallets:
                 continue
-            side = (pos.get("side") or "").lower()
-            if side in ("long", "buy"):
-                wallet_direction[wallet] = "long"
-            elif side in ("short", "sell"):
-                wallet_direction[wallet] = "short"
+            top = (row.get("top_tokens") or row.get("tokens", "")).upper()
+            for t in [x.strip() for x in top.replace(",", " ").split() if x.strip()]:
+                binance_sym = SYMBOL_MAP.get(t, "")
+                if not binance_sym:
+                    continue
+                token_signals.setdefault(t, {"buy": 0, "sell": 0, "wallets": set()})
+                token_signals[t]["buy"] += 1
+                token_signals[t]["wallets"].add(wallet)
 
-        long_wallets = sum(1 for d in wallet_direction.values() if d == "long")
-        short_wallets = sum(1 for d in wallet_direction.values() if d == "short")
-        total = long_wallets + short_wallets
-
-        if total == 0:
-            logger.debug("No directional positions from selected wallets")
+        if not token_signals:
             return []
 
-        long_ratio = long_wallets / total
-        short_ratio = short_wallets / total
-        confidence = max(long_ratio, short_ratio)
+        signals = []
+        for token, data in token_signals.items():
+            total = len(data["wallets"])
+            if total < 2:
+                continue
+            binance_sym = SYMBOL_MAP.get(token, "")
+            confidence = min(data["buy"] / total, 0.85)
+            if confidence < self.min_confidence:
+                continue
+            signals.append(TradeSignal(
+                symbol=binance_sym,
+                side="buy",
+                confidence=confidence,
+                source="macro_sentiment",
+                source_symbol=token,
+                trader_count=total,
+                size_usd=self.position_size_usd,
+            ))
 
-        if confidence < self.min_confidence:
-            logger.info("Sentiment below threshold: long=%d/%d (%.0f%%), short=%d/%d (%.0f%%)",
-                         long_wallets, total, long_ratio * 100,
-                         short_wallets, total, short_ratio * 100)
-            return []
-
-        side = "buy" if long_ratio >= short_ratio else "sell"
-        signal = TradeSignal(
-            symbol="SOL/USDT",
-            side=side,
-            confidence=confidence,
-            source="macro_sentiment",
-            source_symbol="SOL",
-            trader_count=long_wallets if side == "buy" else short_wallets,
-            size_usd=self.position_size_usd,
-        )
-
-        logger.info("Macro sentiment: LONG=%d/%d (%.0f%%) SHORT=%d/%d (%.0f%%) → %s SOL/USDT $%.0f (%.0f%% conf)",
-                     long_wallets, total, long_ratio * 100,
-                     short_wallets, total, short_ratio * 100,
-                     side.upper(), self.position_size_usd, confidence * 100)
-        return [signal]
+        signals.sort(key=lambda s: s.trader_count, reverse=True)
+        if signals:
+            logger.info("Macro sentiment: %d tokens from %d wallets, top=%s (%d wallets, %.0f%%)",
+                         len(signals), len(selected_wallets),
+                         signals[0].source_symbol, signals[0].trader_count,
+                         signals[0].confidence * 100)
+        return signals[:3]
 
     def execute_signal(self, signal: TradeSignal) -> bool:
         self._init_exchange()
@@ -564,10 +587,16 @@ class BinanceCopyExecutor(CopyTradeExecutor):
             return False
 
     def _get_current_price(self, symbol: str) -> float:
-        if self.exchange is None and not self.dry_run:
+        if self.exchange is None:
             self._init_exchange()
-        if self.dry_run or self.exchange is None:
-            return 0.0
+        if self.exchange is None:
+            try:
+                import ccxt
+                pub = ccxt.binance({"enableRateLimit": True})
+                ticker = pub.fetch_ticker(symbol)
+                return float(ticker["last"])
+            except Exception:
+                return 0.0
         try:
             ticker = self.exchange.get_ticker(symbol)
             return ticker["last"]

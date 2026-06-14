@@ -26,6 +26,10 @@ import time
 from datetime import datetime
 from typing import Any
 
+if sys.platform == "win32":
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+
 from apscheduler.schedulers.blocking import BlockingScheduler
 
 from dotenv import load_dotenv
@@ -54,10 +58,10 @@ class CopyTradeBot:
         interval_minutes: int = 15,
         collect_interval: int = 120,
         track_interval: int = 30,
-        max_positions: int = 3,
-        position_size_usd: float = 50,
-        copy_size_sol: float = 0.05,
-        min_confidence: float = 0.60,
+        max_positions: int = 6,
+        position_size_usd: float = 30,
+        copy_size_sol: float = 0.03,
+        min_confidence: float = 0.55,
         min_win_rate: float = 30,
         min_trades: int = 50,
         slippage_bps: int = 200,
@@ -88,12 +92,17 @@ class CopyTradeBot:
 
         self._last_collect = 0.0
         self._last_track = 0.0
+        self._binance_executor = None
+        self._solana_executor = None
+        self._hyperliquid_executor = None
         self.stats: dict[str, Any] = {
             "cycles": 0,
             "binance_signals": 0,
             "solana_signals": 0,
+            "hyperliquid_signals": 0,
             "binance_trades": 0,
             "solana_trades": 0,
+            "hyperliquid_trades": 0,
             "errors": 0,
             "last_cycle_time": "",
             "last_error": "",
@@ -253,48 +262,33 @@ class CopyTradeBot:
 
         if self.mode in ("binance", "both"):
             self._execute_binance()
+        if self.mode in ("hyperliquid", "both"):
+            self._execute_hyperliquid()
         if self.mode in ("solana", "both"):
             self._execute_solana()
 
-    def _execute_binance(self) -> None:
-        try:
+    def _get_binance_executor(self):
+        if self._binance_executor is None:
             from copy_trade.executor import build_binance_executor
-
-            ex = build_binance_executor(
+            self._binance_executor = build_binance_executor(
                 data_dir=self.data_dir,
                 dry_run=self.dry_run,
                 interval=9999,
                 max_positions=self.max_positions,
                 position_size_usd=self.position_size_usd,
                 min_confidence=self.min_confidence,
-                stop_loss_pct=30.0,
-                take_profit_pct=50.0,
-                max_daily_loss_pct=30.0,
+                stop_loss_pct=8.0,
+                take_profit_pct=15.0,
+                max_daily_loss_pct=10.0,
                 max_consecutive_losses=3,
                 total_capital=10000.0,
             )
-            signals = ex.run_once()
-            self.stats["binance_signals"] += len(signals)
-            self.stats["binance_trades"] = len(ex.active_positions)
+        return self._binance_executor
 
-            if signals:
-                for s in ex.active_positions.values():
-                    sig = s["signal"]
-                    logger.info(
-                        "[5/5] Binance ACTIVE %s %s $%.0f (%.0f%% conf, %d traders)",
-                        sig.side.upper(), sig.symbol, sig.size_usd,
-                        sig.confidence * 100, sig.trader_count,
-                    )
-            logger.info("[5/5] Binance: %d signals, %d active positions", len(signals), len(ex.active_positions))
-        except Exception as exc:
-            logger.warning("[5/5] Binance execution error: %s", exc)
-            self.stats["errors"] += 1
-
-    def _execute_solana(self) -> None:
-        try:
+    def _get_solana_executor(self):
+        if self._solana_executor is None:
             from copy_trade.executor import build_solana_executor
-
-            ex = build_solana_executor(
+            self._solana_executor = build_solana_executor(
                 data_dir=self.data_dir,
                 dry_run=self.dry_run,
                 interval=9999,
@@ -306,18 +300,80 @@ class CopyTradeBot:
                 private_key=os.getenv("SOLANA_PRIVATE_KEY") or None,
                 rpc_url=os.getenv("SOLANA_RPC_URL", "https://solana-rpc.publicnode.com"),
             )
+        return self._solana_executor
+
+    def _execute_binance(self) -> None:
+        try:
+            ex = self._get_binance_executor()
+            signals = ex.run_once()
+            self.stats["binance_signals"] += len(signals)
+            self.stats["binance_trades"] = len(ex.active_positions)
+
+            for pos in ex.active_positions.values():
+                sig = pos["signal"]
+                logger.info(
+                    "[5/5] Binance ACTIVE %s %s $%.0f (%.0f%% conf, %d traders)",
+                    sig.side.upper(), sig.symbol, sig.size_usd,
+                    sig.confidence * 100, sig.trader_count,
+                )
+            logger.info("[5/5] Binance: %d new signals, %d active positions", len(signals), len(ex.active_positions))
+        except Exception as exc:
+            logger.warning("[5/5] Binance execution error: %s", exc)
+            self.stats["errors"] += 1
+
+    def _get_hyperliquid_executor(self):
+        if self._hyperliquid_executor is None:
+            from copy_trade.executor import build_hyperliquid_executor
+            self._hyperliquid_executor = build_hyperliquid_executor(
+                data_dir=self.data_dir,
+                dry_run=self.dry_run,
+                interval=9999,
+                max_positions=self.max_positions,
+                position_size_usd=self.position_size_usd,
+                min_confidence=max(self.min_confidence, 0.65),
+                min_delta_notional=100.0,
+                recent_seconds=604800,
+                stop_loss_pct=8.0,
+                take_profit_pct=15.0,
+                max_daily_loss_pct=10.0,
+                max_consecutive_losses=3,
+                total_capital=10000.0,
+            )
+        return self._hyperliquid_executor
+
+    def _execute_hyperliquid(self) -> None:
+        try:
+            ex = self._get_hyperliquid_executor()
+            signals = ex.run_once()
+            self.stats["hyperliquid_signals"] += len(signals)
+            self.stats["hyperliquid_trades"] = len(ex.active_positions)
+
+            for pos in ex.active_positions.values():
+                sig = pos["signal"]
+                logger.info(
+                    "[5/5] Hyperliquid ACTIVE %s %s $%.0f (%.0f%% conf, trader=%s)",
+                    sig.side.upper(), sig.symbol, sig.size_usd,
+                    sig.confidence * 100, sig.source_symbol,
+                )
+            logger.info("[5/5] Hyperliquid: %d new signals, %d active positions", len(signals), len(ex.active_positions))
+        except Exception as exc:
+            logger.warning("[5/5] Hyperliquid execution error: %s", exc)
+            self.stats["errors"] += 1
+
+    def _execute_solana(self) -> None:
+        try:
+            ex = self._get_solana_executor()
             signals = ex.run_once()
             self.stats["solana_signals"] += len(signals)
             self.stats["solana_trades"] = len(ex.active_positions)
 
-            if signals:
-                for s in ex.active_positions.values():
-                    sig = s["signal"]
-                    logger.info(
-                        "[5/5] Solana ACTIVE %s %s (%.2f SOL, %d trust wallets)",
-                        sig.side.upper(), sig.source_symbol, self.copy_size_sol, sig.trader_count,
-                    )
-            logger.info("[5/5] Solana: %d signals, %d active positions", len(signals), len(ex.active_positions))
+            for pos in ex.active_positions.values():
+                sig = pos["signal"]
+                logger.info(
+                    "[5/5] Solana ACTIVE %s %s (%.2f SOL, %d trust wallets)",
+                    sig.side.upper(), sig.source_symbol, self.copy_size_sol, sig.trader_count,
+                )
+            logger.info("[5/5] Solana: %d new signals, %d active positions", len(signals), len(ex.active_positions))
         except Exception as exc:
             logger.warning("[5/5] Solana execution error: %s", exc)
             self.stats["errors"] += 1
@@ -353,9 +409,10 @@ class CopyTradeBot:
         self.stats["last_cycle_time"] = datetime.now().strftime("%H:%M:%S")
 
         logger.info("-" * 50)
-        logger.info("CYCLE DONE  | cycles=%d | binance=%d/%d | solana=%d/%d | errors=%d",
+        logger.info("CYCLE DONE  | cycles=%d | bin=%d/%d | hl=%d/%d | sol=%d/%d | errors=%d",
                      self.stats["cycles"],
                      self.stats["binance_signals"], self.stats["binance_trades"],
+                     self.stats["hyperliquid_signals"], self.stats["hyperliquid_trades"],
                      self.stats["solana_signals"], self.stats["solana_trades"],
                      self.stats["errors"])
         logger.info("=" * 50)
@@ -370,8 +427,9 @@ class CopyTradeBot:
                 f"<b>Copy Trade Bot — {mode_str}</b>\n"
                 f"Mode: {self.mode.upper()}\n"
                 f"Cycles: {self.stats['cycles']}\n"
-                f"Binance: {self.stats['binance_trades']} active / {self.stats['binance_signals']} total signals\n"
-                f"Solana: {self.stats['solana_trades']} active / {self.stats['solana_signals']} total signals\n"
+                f"Binance: {self.stats['binance_trades']} active / {self.stats['binance_signals']} total\n"
+                f"Hyperliquid: {self.stats['hyperliquid_trades']} active / {self.stats['hyperliquid_signals']} total\n"
+                f"Solana: {self.stats['solana_trades']} active / {self.stats['solana_signals']} total\n"
                 f"Errors: {self.stats['errors']}"
             )
             if self.stats["last_error"]:
@@ -417,7 +475,7 @@ def parse_args() -> argparse.Namespace:
                         help="Paper trading / không đánh thật")
     parser.add_argument("--no-dry-run", action="store_false", dest="dry_run",
                         help="Đánh thật (cần API keys)")
-    parser.add_argument("--mode", choices=["binance", "solana", "both"], default="both")
+    parser.add_argument("--mode", choices=["binance", "solana", "hyperliquid", "both"], default="both")
     parser.add_argument("--interval", type=int, default=15, help="Minutes between cycles")
     parser.add_argument("--collect-interval", type=int, default=120, help="Seconds between OKX sweeps")
     parser.add_argument("--track-interval", type=int, default=30, help="Seconds between wallet tx checks")
