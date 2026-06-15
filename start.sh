@@ -2,7 +2,6 @@
 set -e
 mkdir -p data/copy_trade
 
-MODE="${COPY_TRADE_MODE:-hyperliquid}"
 INTERVAL="${CHECK_INTERVAL_MINUTES:-5}"
 COLLECT_INTERVAL="${COPY_TRADE_COLLECT_INTERVAL:-120}"
 TRACK_INTERVAL="${COPY_TRADE_TRACK_INTERVAL:-30}"
@@ -17,10 +16,10 @@ OKX_MAX_WALLETS="${COPY_TRADE_OKX_MAX_WALLETS:-500}"
 
 echo "Starting web dashboard on port 8080..."
 python web_dashboard.py &
-echo "Starting copy trade bot (LIVE mode)..."
+echo "Starting copy trade bot (LIVE mode, futures only)..."
 python main_copy_trade.py \
   --no-dry-run \
-  --mode "$MODE" \
+  --mode hyperliquid \
   --interval "$INTERVAL" \
   --collect-interval "$COLLECT_INTERVAL" \
   --track-interval "$TRACK_INTERVAL" \
