@@ -25,6 +25,13 @@ fi
 
 echo "Starting web dashboard on port 8080..."
 python web_dashboard.py &
+echo "=== ENV DEBUG ==="
+echo "COPY_TRADE_DRY_RUN=[$COPY_TRADE_DRY_RUN]"
+echo "COPY_TRADE_MAX_POSITIONS=[$COPY_TRADE_MAX_POSITIONS]"
+echo "COPY_TRADE_MODE=[$COPY_TRADE_MODE]"
+echo "DRY_RUN_FLAG=[$DRY_RUN_FLAG]"
+echo "MAX_POSITIONS=[$MAX_POSITIONS]"
+echo "================="
 echo "Starting copy trade bot..."
 python main_copy_trade.py \
   "$DRY_RUN_FLAG" \
