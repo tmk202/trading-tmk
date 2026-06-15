@@ -2,3 +2,5 @@ __pycache__/
 *.pyc
 .env
 *.log
+data/copy_trade/runtime/
+data/copy_trade/browser_artifacts/

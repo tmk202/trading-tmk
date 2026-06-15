@@ -38,8 +38,6 @@ from copy_trade.hyperliquid_tracker import (
     load_hyperliquid_wallets,
     save_hyperliquid_state,
 )
-from copy_trade.solana_tracker import SolanaRpcTracker
-from copy_trade.solana_tracker import load_state, load_wallets_from_performance, save_state
 from copy_trade.storage import CopyTradeStore
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data", "copy_trade")
@@ -426,71 +424,8 @@ def cmd_monitor(args: argparse.Namespace) -> int:
 
 
 def cmd_track_wallets(args: argparse.Namespace) -> int:
-    wallets = load_wallets_from_performance(
-        args.wallets_csv,
-        limit=args.wallet_limit,
-        min_win_rate=args.min_win_rate,
-        min_trades=args.min_trades,
-        min_pnl=args.min_pnl,
-    )
-    if not wallets:
-        print("No wallets matched filters.")
-        return 1
-
-    tracker = SolanaRpcTracker(rpc_url=args.rpc_url, sleep_s=args.rpc_sleep)
-    store = CopyTradeStore(args.data_dir)
-    state_path = args.state_file or os.path.join(args.data_dir, "solana_tracker_state.json")
-    state = load_state(state_path)
-    iteration = 0
-
-    print("=== SOLANA WALLET TRACKER ===")
-    print(f"Wallets:  {len(wallets)}")
-    print(f"RPC:      {args.rpc_url}")
-    print(f"State:    {state_path}")
-    print(f"Output:   {os.path.join(args.data_dir, 'wallet_trade_events.csv')}")
-    print("")
-
-    try:
-        while True:
-            iteration += 1
-            all_events = []
-            for wallet in wallets:
-                seen = set(state.get(wallet, []))
-                try:
-                    events, newest = tracker.collect_wallet(
-                        wallet=wallet,
-                        limit=args.tx_limit,
-                        seen_signatures=seen,
-                        include_failed=args.include_failed,
-                    )
-                except Exception as exc:
-                    print(f"[{utc_now_iso()}] rpc_error wallet={wallet[:10]} {exc}")
-                    continue
-                if newest:
-                    state[wallet] = list(dict.fromkeys(newest + state.get(wallet, [])))[: args.state_signatures]
-                all_events.extend(events)
-
-            if all_events:
-                store.append_csv("wallet_trade_events.csv", all_events)
-                store.append_jsonl("wallet_trade_events.jsonl", all_events)
-                for event in all_events[: args.rows]:
-                    print(
-                        f"[{event.block_time}] {event.wallet[:10]} {event.action.upper():<4} "
-                        f"{event.token_symbol:<10} token_delta={event.token_delta:.6g} "
-                        f"quote={event.quote_symbol}:{event.quote_delta:.6g} sig={event.signature[:10]}"
-                    )
-            else:
-                print(f"[{utc_now_iso()}] heartbeat wallets={len(wallets)} events=0")
-
-            save_state(state_path, state)
-            if args.iterations and iteration >= args.iterations:
-                break
-            time.sleep(args.interval)
-    except KeyboardInterrupt:
-        save_state(state_path, state)
-        print("\nStopped wallet tracker.")
-
-    return 0
+    print("Solana wallet tracking is no longer supported in this build.")
+    return 1
 
 
 def cmd_track_hyperliquid(args: argparse.Namespace) -> int:
@@ -930,21 +865,7 @@ def parse_args() -> argparse.Namespace:
     monitor.add_argument("--rows", type=int, default=20)
     monitor.add_argument("--data-dir", default=DATA_DIR)
 
-    track = sub.add_parser("track-wallets")
-    track.add_argument("--wallets-csv", default=os.path.join(DATA_DIR, "wallet_performance.csv"))
-    track.add_argument("--wallet-limit", type=int, default=10)
-    track.add_argument("--min-win-rate", type=float, default=55)
-    track.add_argument("--min-trades", type=int, default=100)
-    track.add_argument("--min-pnl", type=float, default=5000)
-    track.add_argument("--tx-limit", type=int, default=5)
-    track.add_argument("--include-failed", action="store_true")
-    track.add_argument("--rpc-url", default=os.getenv("SOLANA_RPC_URL", "https://solana-rpc.publicnode.com"))
-    track.add_argument("--rpc-sleep", type=float, default=0.2)
-    track.add_argument("--interval", type=float, default=20)
-    track.add_argument("--iterations", type=int, default=1)
-    track.add_argument("--rows", type=int, default=30)
-    track.add_argument("--state-signatures", type=int, default=200)
-    track.add_argument("--state-file")
+    track = sub.add_parser("track-wallets", help="(deprecated) Solana wallet tracking is no longer supported")
     track.add_argument("--data-dir", default=DATA_DIR)
 
     hl_sweep = sub.add_parser("hyperliquid-sweep")
@@ -1047,26 +968,20 @@ def parse_args() -> argparse.Namespace:
     pnl.add_argument("--data-dir", default=DATA_DIR)
 
     execute = sub.add_parser("execute")
-    execute.add_argument("--mode", choices=["binance", "solana", "hyperliquid", "both", "all"], default="binance")
+    execute.add_argument("--mode", choices=["binance", "hyperliquid", "both"], default="hyperliquid")
     execute.add_argument("--dry-run", action="store_true", default=True)
     execute.add_argument("--no-dry-run", action="store_false", dest="dry_run")
     execute.add_argument("--interval", type=float, default=60)
     execute.add_argument("--iterations", type=int, default=0)
     execute.add_argument("--max-positions", type=int, default=3)
     execute.add_argument("--position-size-usd", type=float, default=50)
-    execute.add_argument("--copy-size-sol", type=float, default=0.05)
     execute.add_argument("--min-confidence", type=float, default=0.60)
     execute.add_argument("--hl-min-delta-notional", type=float, default=1000)
     execute.add_argument("--hl-recent-seconds", type=int, default=900)
-    execute.add_argument("--min-win-rate", type=float, default=55)
-    execute.add_argument("--min-trades", type=int, default=50)
-    execute.add_argument("--slippage-bps", type=int, default=200)
-    execute.add_argument("--stop-loss-pct", type=float, default=30.0)
-    execute.add_argument("--take-profit-pct", type=float, default=50.0)
-    execute.add_argument("--max-daily-loss-pct", type=float, default=30.0)
+    execute.add_argument("--stop-loss-pct", type=float, default=8.0)
+    execute.add_argument("--take-profit-pct", type=float, default=15.0)
+    execute.add_argument("--max-daily-loss-pct", type=float, default=10.0)
     execute.add_argument("--max-consecutive-losses", type=int, default=3)
-    execute.add_argument("--solana-key", default=os.getenv("SOLANA_PRIVATE_KEY", ""))
-    execute.add_argument("--solana-rpc", default=os.getenv("SOLANA_RPC_URL", "https://solana-rpc.publicnode.com"))
     execute.add_argument("--data-dir", default=DATA_DIR)
 
     return parser.parse_args()
@@ -1406,12 +1321,11 @@ def cmd_execute(args: argparse.Namespace) -> int:
         CopyTradeOrchestrator,
         build_binance_executor,
         build_hyperliquid_executor,
-        build_solana_executor,
     )
 
     orch = CopyTradeOrchestrator(data_dir=args.data_dir, dry_run=args.dry_run)
 
-    if args.mode in ("binance", "both", "all"):
+    if args.mode in ("binance", "both"):
         executor = build_binance_executor(
             data_dir=args.data_dir,
             dry_run=args.dry_run,
@@ -1427,23 +1341,7 @@ def cmd_execute(args: argparse.Namespace) -> int:
         orch.add(executor)
         print(f"Binance executor added (dry_run={args.dry_run}, interval={args.interval}s)")
 
-    if args.mode in ("solana", "both", "all"):
-        executor = build_solana_executor(
-            data_dir=args.data_dir,
-            dry_run=args.dry_run,
-            interval=args.interval,
-            max_positions=args.max_positions,
-            copy_size_sol=args.copy_size_sol,
-            min_win_rate=args.min_win_rate,
-            min_trades=args.min_trades,
-            slippage_bps=args.slippage_bps,
-            private_key=args.solana_key or None,
-            rpc_url=args.solana_rpc,
-        )
-        orch.add(executor)
-        print(f"Solana executor added (dry_run={args.dry_run}, interval={args.interval}s)")
-
-    if args.mode in ("hyperliquid", "all"):
+    if args.mode in ("hyperliquid", "both"):
         executor = build_hyperliquid_executor(
             data_dir=args.data_dir,
             dry_run=args.dry_run,

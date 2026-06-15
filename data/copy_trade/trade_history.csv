@@ -53,3 +53,4 @@ timestamp,action,symbol,side,price,size_usd,source,source_symbol,trader_count,tx
 2026-06-11T10:36:11+00:00,open,AVAX/USDT,sell,,25.0,hyperliquid_position_copy,AVAX,1,,,True
 2026-06-11T10:36:11+00:00,open,AAVE/USDT,sell,,25.0,hyperliquid_position_copy,AAVE,1,,,True
 2026-06-11T14:36:27+00:00,open,SOL/USDT,sell,65.63,25.0,hyperliquid_position_copy,SOL,1,642295,,False
+2026-06-15T07:06:11+00:00,open,SOL/USDT,sell,,100,hyperliquid_position_copy,SOL,1,,,True

@@ -32,7 +32,6 @@ def setup_test_data(tmpdir: str) -> dict[str, str]:
     """Seed CSV files from real data into tmpdir."""
     files = {
         "wallet_selection.csv": os.path.join(DATA_DIR, "wallet_selection.csv"),
-        "wallet_trade_events.csv": os.path.join(DATA_DIR, "wallet_trade_events.csv"),
         "trader_positions.csv": os.path.join(DATA_DIR, "trader_positions.csv"),
     }
     for name, src in files.items():
@@ -165,43 +164,6 @@ def test_binance_executor():
                   f"size=${sig.size_usd:.0f} | conf={sig.confidence*100:.0f}%")
 
     return len(ex.active_positions) > 0
-
-
-def test_solana_executor():
-    print("\n" + "="*70)
-    print("TEST 4: SolanaCopyExecutor — Track ví + copy (dry-run)")
-    print("="*70)
-
-    from copy_trade.executor import build_solana_executor
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        setup_test_data(tmpdir)
-
-        ex = build_solana_executor(
-            data_dir=tmpdir,
-            dry_run=True,
-            interval=9999,
-            max_positions=3,
-            copy_size_sol=0.05,
-            min_win_rate=0,
-            min_trades=0,
-            slippage_bps=200,
-        )
-
-        signals = ex.run_once()
-        print(f"  Signals generated: {len(signals)}")
-        for s in signals:
-            print(f"    {s.side.upper():4s} {s.source_symbol:15s} | "
-                  f"size={s.size_usd:.2f} SOL | confidence={s.confidence*100:.0f}% | "
-                  f"traders={s.trader_count}")
-
-        print(f"  Active positions: {len(ex.active_positions)}")
-        for sym, pos in ex.active_positions.items():
-            sig = pos["signal"]
-            print(f"    {sym[:15]:15s} | side={sig.side:4s} | "
-                  f"traders={sig.trader_count}")
-
-    return True
 
 
 def test_multi_cycle_tp():
@@ -562,14 +524,7 @@ def main():
         errors.append(("binance_executor", str(e)))
         logger.error("FAIL binance_executor: %s", e)
 
-    # Test 4: Solana executor dry-run
-    try:
-        results["solana_executor"] = test_solana_executor()
-    except Exception as e:
-        errors.append(("solana_executor", str(e)))
-        logger.error("FAIL solana_executor: %s", e)
-
-    # Test 5: Multi-cycle with TP
+    # Test 4: Multi-cycle with TP
     try:
         results["multi_cycle_tp"] = test_multi_cycle_tp()
     except Exception as e:

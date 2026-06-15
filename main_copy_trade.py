@@ -1,20 +1,21 @@
 #!/usr/bin/env python3
 """
-Copy Trade Bot — nền tảng test + live copy trade.
+Copy Trade Bot — Binance Futures (Hyperliquid cross-venue).
 
-Chạy liên tục theo chu kỳ:
-  1. Collect OKX Web3 traders + positions
+Pipeline (mỗi cycle):
+  1. Collect OKX Web3 Solana leaderboard
   2. Score wallet performance
-  3. Build consensus signals
-  4. Track Solana wallet transactions
-  5. Execute copy trades (Binance + Solana)
+  3. Select potential wallets
+  4. Build consensus signals
+  5. Track Hyperliquid wallet positions
+  6. Execute copy trades on Binance Futures
 
 Usage:
-  python3 main_copy_trade.py                  # daemon mode (mặc định)
+  python3 main_copy_trade.py                  # daemon mode (mặc định dry-run)
   python3 main_copy_trade.py --once            # chạy 1 cycle rồi thoát
-  python3 main_copy_trade.py --dry-run         # chạy daemon, không đánh thật
-  python3 main_copy_trade.py --mode binance    # chỉ chạy Binance executor
-  python3 main_copy_trade.py --mode solana     # chỉ chạy Solana executor
+  python3 main_copy_trade.py --no-dry-run      # đánh thật (cần API keys)
+  python3 main_copy_trade.py --mode binance    # chỉ chạy Binance Futures executor
+  python3 main_copy_trade.py --mode hyperliquid # chỉ chạy Hyperliquid executor
 """
 from __future__ import annotations
 
@@ -53,20 +54,14 @@ logger = logging.getLogger("copy_trade_bot")
 class CopyTradeBot:
     def __init__(
         self,
-        mode: str = "both",
+        mode: str = "hyperliquid",
         dry_run: bool = True,
         interval_minutes: int = 15,
         collect_interval: int = 120,
-        track_interval: int = 30,
         max_positions: int = 6,
-        position_size_usd: float = 30,
-        copy_size_sol: float = 0.03,
-        min_confidence: float = 0.55,
-        min_win_rate: float = 30,
-        min_trades: int = 50,
+        position_size_usd: float = 100,
+        min_confidence: float = 0.65,
         slippage_bps: int = 200,
-        track_wallet_limit: int = 5,
-        track_tx_limit: int = 8,
         okx_max_wallets: int = 300,
     ):
         self.mode = mode
@@ -76,32 +71,21 @@ class CopyTradeBot:
         self.store = CopyTradeStore(DATA_DIR)
         self.notifier = Notifier()
 
-        # Executor config
         self.max_positions = max_positions
         self.position_size_usd = position_size_usd
-        self.copy_size_sol = copy_size_sol
         self.min_confidence = min_confidence
-        self.min_win_rate = min_win_rate
-        self.min_trades = min_trades
         self.slippage_bps = slippage_bps
-        self.track_wallet_limit = track_wallet_limit
-        self.track_tx_limit = track_tx_limit
         self.okx_max_wallets = okx_max_wallets
         self.collect_interval = collect_interval
-        self.track_interval = track_interval
 
         self._last_collect = 0.0
-        self._last_track = 0.0
         self._binance_executor = None
-        self._solana_executor = None
         self._hyperliquid_executor = None
         self.stats: dict[str, Any] = {
             "cycles": 0,
             "binance_signals": 0,
-            "solana_signals": 0,
             "hyperliquid_signals": 0,
             "binance_trades": 0,
-            "solana_trades": 0,
             "hyperliquid_trades": 0,
             "errors": 0,
             "last_cycle_time": "",
@@ -222,36 +206,28 @@ class CopyTradeBot:
         except Exception as exc:
             logger.warning("[3/5] Consensus failed: %s", exc)
 
-    def track_wallets(self) -> None:
-        """Step 4: Track Solana wallet transactions."""
-        logger.info("[4/5] Tracking Solana wallets...")
+    def track_hyperliquid(self) -> None:
+        """Step 4: Track Hyperliquid wallet positions + fills."""
+        logger.info("[4/5] Tracking Hyperliquid wallets...")
         try:
-            from copy_trade_lab import cmd_track_wallets
+            from copy_trade_lab import cmd_track_hyperliquid
             import argparse
 
-            perf_csv = os.path.join(self.data_dir, "wallet_performance.csv")
-            if not os.path.exists(perf_csv):
-                logger.warning("[4/5] No wallet performance, skip tracking")
-                return
-
             args = argparse.Namespace(
-                wallets_csv=perf_csv,
-                wallet_limit=self.track_wallet_limit,
-                min_win_rate=self.min_win_rate,
-                min_trades=self.min_trades,
-                min_pnl=5000,
-                tx_limit=self.track_tx_limit,
-                include_failed=False,
-                rpc_url=os.getenv("SOLANA_RPC_URL", "https://solana-rpc.publicnode.com"),
-                rpc_sleep=0.2,
-                interval=30,
+                wallets_csv=os.path.join(self.data_dir, "hyperliquid_tracking_universe.csv"),
+                leaderboard_url="https://dexly.trade/hyperliquid/leaderboard",
+                wallet_limit=10,
+                wallet_offset=0,
+                active_only=False,
+                emit_initial=False,
+                fill_limit=50,
+                interval=3,
                 iterations=1,
                 rows=30,
-                state_signatures=200,
-                state_file="",
+                state_file=os.path.join(self.data_dir, "hyperliquid_tracker_state.json"),
                 data_dir=self.data_dir,
             )
-            cmd_track_wallets(args)
+            cmd_track_hyperliquid(args)
             logger.info("[4/5] Tracking OK")
         except Exception as exc:
             logger.warning("[4/5] Tracking failed: %s", exc)
@@ -264,8 +240,6 @@ class CopyTradeBot:
             self._execute_binance()
         if self.mode in ("hyperliquid", "both"):
             self._execute_hyperliquid()
-        if self.mode in ("solana", "both"):
-            self._execute_solana()
 
     def _get_binance_executor(self):
         if self._binance_executor is None:
@@ -284,42 +258,6 @@ class CopyTradeBot:
                 total_capital=10000.0,
             )
         return self._binance_executor
-
-    def _get_solana_executor(self):
-        if self._solana_executor is None:
-            from copy_trade.executor import build_solana_executor
-            self._solana_executor = build_solana_executor(
-                data_dir=self.data_dir,
-                dry_run=self.dry_run,
-                interval=9999,
-                max_positions=self.max_positions,
-                copy_size_sol=self.copy_size_sol,
-                min_win_rate=self.min_win_rate,
-                min_trades=self.min_trades,
-                slippage_bps=self.slippage_bps,
-                private_key=os.getenv("SOLANA_PRIVATE_KEY") or None,
-                rpc_url=os.getenv("SOLANA_RPC_URL", "https://solana-rpc.publicnode.com"),
-            )
-        return self._solana_executor
-
-    def _execute_binance(self) -> None:
-        try:
-            ex = self._get_binance_executor()
-            signals = ex.run_once()
-            self.stats["binance_signals"] += len(signals)
-            self.stats["binance_trades"] = len(ex.active_positions)
-
-            for pos in ex.active_positions.values():
-                sig = pos["signal"]
-                logger.info(
-                    "[5/5] Binance ACTIVE %s %s $%.0f (%.0f%% conf, %d traders)",
-                    sig.side.upper(), sig.symbol, sig.size_usd,
-                    sig.confidence * 100, sig.trader_count,
-                )
-            logger.info("[5/5] Binance: %d new signals, %d active positions", len(signals), len(ex.active_positions))
-        except Exception as exc:
-            logger.warning("[5/5] Binance execution error: %s", exc)
-            self.stats["errors"] += 1
 
     def _get_hyperliquid_executor(self):
         if self._hyperliquid_executor is None:
@@ -341,6 +279,25 @@ class CopyTradeBot:
             )
         return self._hyperliquid_executor
 
+    def _execute_binance(self) -> None:
+        try:
+            ex = self._get_binance_executor()
+            signals = ex.run_once()
+            self.stats["binance_signals"] += len(signals)
+            self.stats["binance_trades"] = len(ex.active_positions)
+
+            for pos in ex.active_positions.values():
+                sig = pos["signal"]
+                logger.info(
+                    "[5/5] Binance ACTIVE %s %s $%.0f (%.0f%% conf, %d traders)",
+                    sig.side.upper(), sig.symbol, sig.size_usd,
+                    sig.confidence * 100, sig.trader_count,
+                )
+            logger.info("[5/5] Binance: %d new signals, %d active positions", len(signals), len(ex.active_positions))
+        except Exception as exc:
+            logger.warning("[5/5] Binance execution error: %s", exc)
+            self.stats["errors"] += 1
+
     def _execute_hyperliquid(self) -> None:
         try:
             ex = self._get_hyperliquid_executor()
@@ -360,24 +317,6 @@ class CopyTradeBot:
             logger.warning("[5/5] Hyperliquid execution error: %s", exc)
             self.stats["errors"] += 1
 
-    def _execute_solana(self) -> None:
-        try:
-            ex = self._get_solana_executor()
-            signals = ex.run_once()
-            self.stats["solana_signals"] += len(signals)
-            self.stats["solana_trades"] = len(ex.active_positions)
-
-            for pos in ex.active_positions.values():
-                sig = pos["signal"]
-                logger.info(
-                    "[5/5] Solana ACTIVE %s %s (%.2f SOL, %d trust wallets)",
-                    sig.side.upper(), sig.source_symbol, self.copy_size_sol, sig.trader_count,
-                )
-            logger.info("[5/5] Solana: %d new signals, %d active positions", len(signals), len(ex.active_positions))
-        except Exception as exc:
-            logger.warning("[5/5] Solana execution error: %s", exc)
-            self.stats["errors"] += 1
-
     # ── Main cycle ────────────────────────────────────────
 
     def run_cycle(self) -> None:
@@ -393,11 +332,8 @@ class CopyTradeBot:
                 self.score_wallets()
                 self.select_wallets()
                 self.build_consensus()
+                self.track_hyperliquid()
                 self._last_collect = now
-
-            if now - self._last_track >= self.track_interval:
-                self.track_wallets()
-                self._last_track = now
 
             self.execute_trades()
         except Exception as exc:
@@ -409,11 +345,10 @@ class CopyTradeBot:
         self.stats["last_cycle_time"] = datetime.now().strftime("%H:%M:%S")
 
         logger.info("-" * 50)
-        logger.info("CYCLE DONE  | cycles=%d | bin=%d/%d | hl=%d/%d | sol=%d/%d | errors=%d",
+        logger.info("CYCLE DONE  | cycles=%d | bin=%d/%d | hl=%d/%d | errors=%d",
                      self.stats["cycles"],
                      self.stats["binance_signals"], self.stats["binance_trades"],
                      self.stats["hyperliquid_signals"], self.stats["hyperliquid_trades"],
-                     self.stats["solana_signals"], self.stats["solana_trades"],
                      self.stats["errors"])
         logger.info("=" * 50)
 
@@ -427,9 +362,8 @@ class CopyTradeBot:
                 f"<b>Copy Trade Bot — {mode_str}</b>\n"
                 f"Mode: {self.mode.upper()}\n"
                 f"Cycles: {self.stats['cycles']}\n"
-                f"Binance: {self.stats['binance_trades']} active / {self.stats['binance_signals']} total\n"
+                f"Binance Futures: {self.stats['binance_trades']} active / {self.stats['binance_signals']} total\n"
                 f"Hyperliquid: {self.stats['hyperliquid_trades']} active / {self.stats['hyperliquid_signals']} total\n"
-                f"Solana: {self.stats['solana_trades']} active / {self.stats['solana_signals']} total\n"
                 f"Errors: {self.stats['errors']}"
             )
             if self.stats["last_error"]:
@@ -448,7 +382,7 @@ class CopyTradeBot:
             f"Mode: {self.mode.upper()}\n"
             f"Dry-run: {self.dry_run}\n"
             f"Interval: {self.interval_minutes}m\n"
-            f"Binance testnet: {testnet}"
+            f"Binance Futures testnet: {testnet}"
         )
 
         scheduler = BlockingScheduler()
@@ -469,24 +403,19 @@ class CopyTradeBot:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Copy Trade Bot Platform")
+    parser = argparse.ArgumentParser(description="Copy Trade Bot — Binance Futures (Hyperliquid cross-venue)")
     parser.add_argument("--once", action="store_true", help="Run one cycle then exit")
-    parser.add_argument("--dry-run", action="store_true", default=False,
+    parser.add_argument("--dry-run", action="store_true", default=True,
                         help="Paper trading / không đánh thật")
     parser.add_argument("--no-dry-run", action="store_false", dest="dry_run",
                         help="Đánh thật (cần API keys)")
-    parser.add_argument("--mode", choices=["binance", "solana", "hyperliquid", "both"], default="both")
+    parser.add_argument("--mode", choices=["binance", "hyperliquid", "both"], default="hyperliquid")
     parser.add_argument("--interval", type=int, default=15, help="Minutes between cycles")
     parser.add_argument("--collect-interval", type=int, default=120, help="Seconds between OKX sweeps")
-    parser.add_argument("--track-interval", type=int, default=30, help="Seconds between wallet tx checks")
     parser.add_argument("--max-positions", type=int, default=3)
-    parser.add_argument("--position-size-usd", type=float, default=50)
-    parser.add_argument("--copy-size-sol", type=float, default=0.05)
-    parser.add_argument("--min-confidence", type=float, default=0.60)
-    parser.add_argument("--min-win-rate", type=float, default=30)
-    parser.add_argument("--min-trades", type=int, default=50)
-    parser.add_argument("--track-wallet-limit", type=int, default=5)
-    parser.add_argument("--track-tx-limit", type=int, default=8)
+    parser.add_argument("--position-size-usd", type=float, default=100)
+    parser.add_argument("--min-confidence", type=float, default=0.65)
+    parser.add_argument("--slippage-bps", type=int, default=200)
     parser.add_argument("--okx-max-wallets", type=int, default=300)
     return parser.parse_args()
 
@@ -498,15 +427,10 @@ def main() -> int:
         dry_run=args.dry_run,
         interval_minutes=args.interval,
         collect_interval=args.collect_interval,
-        track_interval=args.track_interval,
         max_positions=args.max_positions,
         position_size_usd=args.position_size_usd,
-        copy_size_sol=args.copy_size_sol,
         min_confidence=args.min_confidence,
-        min_win_rate=args.min_win_rate,
-        min_trades=args.min_trades,
-        track_wallet_limit=args.track_wallet_limit,
-        track_tx_limit=args.track_tx_limit,
+        slippage_bps=args.slippage_bps,
         okx_max_wallets=args.okx_max_wallets,
     )
 

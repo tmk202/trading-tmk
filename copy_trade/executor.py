@@ -14,11 +14,6 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-SOL_MINT = "So11111111111111111111111111111111111111112"
-USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
-USDT_MINT = "Es9vMFrzaCERmJfrF4H2FYD4E9Gkrb2Z3M8G7WQKfE8"
-STABLE_MINTS = {USDC_MINT, USDT_MINT}
-
 SYMBOL_MAP = {
     "SOL": "SOL/USDT",
     "BTC": "BTC/USDT",
@@ -383,7 +378,6 @@ class BinanceCopyExecutor(CopyTradeExecutor):
         self.position_size_usd = position_size_usd
         self.min_confidence = min_confidence
         self.exchange = None
-        self.risk_manager = None
         self._processed_sigs: set[str] = set()
 
     def _init_exchange(self) -> None:
@@ -392,94 +386,14 @@ class BinanceCopyExecutor(CopyTradeExecutor):
         if self.dry_run:
             return
         try:
-            from exchange import Exchange
-            from risk_manager import RiskManager
-
-            self.exchange = Exchange()
-            balance = self.exchange.fetch_balance()
-            usdt = float(balance.get("USDT", {}).get("free", 0))
-            self.risk_manager = RiskManager(usdt)
-            logger.info("Binance connected. USDT balance: %.2f", usdt)
+            self.exchange = BinanceFuturesExchange()
+            usdt = self.exchange.get_free_balance("USDT")
+            logger.info("Binance Futures connected. USDT balance: %.2f", usdt)
         except Exception as exc:
-            logger.warning("Binance init failed (dry-run will simulate): %s", exc)
+            logger.warning("Binance Futures init failed (dry-run will simulate): %s", exc)
 
     def collect_signals(self) -> list[TradeSignal]:
-        signals = self._collect_wallet_copy_signals()
-        if signals:
-            return signals
         return self._collect_macro_sentiment()
-
-    def _collect_wallet_copy_signals(self) -> list[TradeSignal]:
-        events = self._load_csv("wallet_trade_events.csv")
-        if not events:
-            logger.debug("Need wallet_trade_events.csv for wallet copy")
-            return []
-
-        selection = self._load_csv("wallet_selection.csv")
-        selected = {row.get("wallet", "") for row in selection} if selection else {}
-
-        now = datetime.now(timezone.utc)
-        cutoff = now.timestamp() - 43200
-
-        symbol_actions: dict[str, list[dict[str, str]]] = {}
-        for row in reversed(events):
-            sig = row.get("signature", "")
-            if sig in self._processed_sigs:
-                continue
-
-            action = row.get("action", "")
-            if action not in ("buy", "sell"):
-                continue
-
-            wallet = row.get("wallet", "")
-            if selected and wallet not in selected:
-                continue
-
-            block_ts = _parse_iso_to_ts(row.get("block_time", ""))
-            if block_ts is None or block_ts < cutoff:
-                continue
-
-            source_symbol = row.get("token_symbol", "").upper()
-            binance_symbol = SYMBOL_MAP.get(source_symbol, "")
-            if not binance_symbol:
-                continue
-
-            self._processed_sigs.add(sig)
-            symbol_actions.setdefault(source_symbol, []).append(row)
-
-        signals: list[TradeSignal] = []
-        for source_symbol, rows in symbol_actions.items():
-            buys = sum(1 for r in rows if r.get("action") == "buy")
-            sells = sum(1 for r in rows if r.get("action") == "sell")
-            total = buys + sells
-            if total == 0:
-                continue
-
-            buy_ratio = buys / total
-            sell_ratio = sells / total
-            confidence = max(buy_ratio, sell_ratio)
-            if confidence < self.min_confidence:
-                continue
-
-            side = "buy" if buy_ratio >= sell_ratio else "sell"
-            binance_symbol = SYMBOL_MAP.get(source_symbol, "")
-            wallets = {r.get("wallet") for r in rows}
-
-            signals.append(TradeSignal(
-                symbol=binance_symbol,
-                side=side,
-                confidence=confidence,
-                source="wallet_copy",
-                source_symbol=source_symbol,
-                trader_count=len(wallets),
-                size_usd=self.position_size_usd,
-            ))
-
-            logger.info("Wallet copy: %s %s (→%s) $%.0f (%.0f%% conf, %d wallets, %d events)",
-                         side.upper(), source_symbol, binance_symbol, self.position_size_usd,
-                         confidence * 100, len(wallets), total)
-
-        return signals
 
     def _collect_macro_sentiment(self) -> list[TradeSignal]:
         selection = self._load_csv("wallet_selection.csv")
@@ -630,232 +544,6 @@ class BinanceCopyExecutor(CopyTradeExecutor):
         except Exception as exc:
             logger.error("Close failed %s: %s", symbol, exc)
             return False
-
-
-class SolanaCopyExecutor(CopyTradeExecutor):
-    def __init__(
-        self,
-        data_dir: str,
-        dry_run: bool = True,
-        interval: float = 60,
-        max_positions: int = 3,
-        copy_size_sol: float = 0.05,
-        min_win_rate: float = 55,
-        min_trades: int = 50,
-        slippage_bps: int = 200,
-        private_key: str | None = None,
-        rpc_url: str = "https://solana-rpc.publicnode.com",
-    ):
-        super().__init__(data_dir, dry_run, interval)
-        self.max_positions = max_positions
-        self.copy_size_sol = copy_size_sol
-        self.min_win_rate = min_win_rate
-        self.min_trades = min_trades
-        self.slippage_bps = slippage_bps
-        self.private_key = private_key
-        self.rpc_url = rpc_url
-        self._kp = None
-        self._wallet_blacklist: set[str] = set()
-        self._processed_sigs: set[str] = set()
-
-    def _init_wallet(self) -> bool:
-        if self._kp is not None:
-            return True
-        if self.dry_run:
-            self._kp = "dry_run"
-            return True
-        if not self.private_key:
-            logger.warning("No Solana private key set. Use SOLANA_PRIVATE_KEY env or --solana-key")
-            return False
-        try:
-            from solders.keypair import Keypair
-            import base58
-            decoded = base58.b58decode(str(self.private_key).strip())
-            self._kp = Keypair.from_bytes(decoded)
-            logger.info("Solana wallet loaded: %s", self._kp.pubkey())
-            return True
-        except Exception as exc:
-            logger.error("Failed to load Solana keypair: %s", exc)
-            return False
-
-    def collect_signals(self) -> list[TradeSignal]:
-        rows = self._load_csv("wallet_trade_events.csv")
-        if not rows:
-            logger.debug("No wallet trade events CSV")
-            return []
-
-        # Ưu tiên wallet_selection.csv (chỉ copy từ ví đã chọn)
-        selection = self._load_csv("wallet_selection.csv")
-        if selection:
-            trusted = {row.get("wallet", "") for row in selection if row.get("wallet")}
-        else:
-            perf_rows = self._load_csv("wallet_performance.csv")
-            trusted = self._build_trusted_wallets(perf_rows)
-
-        signals: list[TradeSignal] = []
-        seen_tokens: dict[str, list[dict[str, str]]] = {}
-        for row in rows:
-            wallet = row.get("wallet", "")
-            sig = row.get("signature", "")
-            if sig in self._processed_sigs:
-                continue
-            if wallet not in trusted and trusted:
-                continue
-            token = row.get("token_mint", "")
-            action = row.get("action", "")
-            if not token or token in STABLE_MINTS or token == SOL_MINT:
-                continue
-            if action not in ("buy", "sell"):
-                continue
-            seen_tokens.setdefault(token, []).append(row)
-
-        for token, token_rows in seen_tokens.items():
-            latest = token_rows[-1]
-            action = latest["action"]
-            side_map = {"buy": "buy", "sell": "sell"}
-            side = side_map.get(action, "hold")
-            if side == "hold":
-                continue
-
-            token_symbol = latest.get("token_symbol") or token[:8]
-            signals.append(TradeSignal(
-                symbol=token,
-                side=side,
-                confidence=0.75,
-                source="wallet_copy",
-                source_symbol=token_symbol,
-                trader_count=len({r.get("wallet") for r in token_rows}),
-                size_usd=self.copy_size_sol,
-            ))
-
-        return signals
-
-    def _build_trusted_wallets(self, perf_rows: list[dict[str, str]]) -> set[str]:
-        trusted = set()
-        for row in perf_rows:
-            wr = _to_float(row.get("win_rate_pct"))
-            tx = _to_float(row.get("tx"))
-            if wr is not None and wr >= self.min_win_rate:
-                if tx is None or tx >= self.min_trades:
-                    wallet = row.get("wallet", "")
-                    if wallet:
-                        trusted.add(wallet)
-        return trusted
-
-    def execute_signal(self, signal: TradeSignal) -> bool:
-        if len(self.active_positions) >= self.max_positions:
-            logger.info("Max positions (%d), skip %s %s", self.max_positions, signal.side, signal.source_symbol)
-            return False
-
-        if self.dry_run:
-            logger.info(
-                "[DRY-RUN] %s %s (%.2f SOL input, %.0f%% slippage) trust_wallets=%d",
-                signal.side.upper(), signal.source_symbol, self.copy_size_sol,
-                self.slippage_bps / 100, signal.trader_count,
-            )
-            self.active_positions[signal.symbol] = {
-                "side": signal.side,
-                "entry_time": _now_iso(),
-                "signal": signal,
-            }
-            self._log_trade("open", signal.source_symbol, signal.side, None, self.copy_size_sol,
-                            signal.source, signal.source_symbol, signal.trader_count, dry_run=True)
-            return True
-
-        if not self._init_wallet():
-            return False
-
-        output_mint = USDC_MINT if signal.side == "sell" else signal.symbol
-        input_mint = signal.symbol if signal.side == "sell" else USDC_MINT
-        quote = self._jupiter_quote(input_mint, output_mint, signal.side, signal)
-        if quote is None:
-            return False
-
-        return self._execute_swap(quote, signal)
-
-    def _jupiter_quote(self, input_mint: str, output_mint: str, side: str, signal: TradeSignal) -> dict | None:
-        import requests
-        try:
-            amount = int(self.copy_size_sol * 1_000_000_000) if input_mint == SOL_MINT else int(self.copy_size_sol * 1_000_000)
-            resp = requests.get(
-                "https://quote-api.jup.ag/v6/quote",
-                params={
-                    "inputMint": input_mint,
-                    "outputMint": output_mint,
-                    "amount": amount,
-                    "slippageBps": self.slippage_bps,
-                },
-                timeout=15,
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            if not data or isinstance(data, list):
-                logger.warning("No quote for %s %s", side, signal.source_symbol)
-                return None
-            return data
-        except Exception as exc:
-            logger.warning("Jupiter quote error %s: %s", signal.source_symbol, exc)
-            return None
-
-    def _execute_swap(self, quote: dict, signal: TradeSignal) -> bool:
-        import requests
-        try:
-            swap_resp = requests.post(
-                "https://quote-api.jup.ag/v6/swap",
-                json={
-                    "quoteResponse": quote,
-                    "userPublicKey": str(self._kp.pubkey()),
-                    "wrapAndUnwrapSol": True,
-                    "dynamicComputeUnitLimit": True,
-                    "prioritizationFeeLamports": "auto",
-                },
-                timeout=20,
-            )
-            swap_resp.raise_for_status()
-            swap_data = swap_resp.json()
-
-            import base64
-            from solders.transaction import VersionedTransaction
-            from solana.rpc.api import Client
-
-            tx_bytes = base64.b64decode(swap_data["swapTransaction"])
-            tx = VersionedTransaction.from_bytes(tx_bytes)
-            signed_tx = VersionedTransaction(tx.message, [self._kp])
-
-            client = Client(self.rpc_url)
-            result = client.send_raw_transaction(bytes(signed_tx))
-            tx_sig = result.value
-
-            self.active_positions[signal.symbol] = {
-                "side": signal.side,
-                "entry_time": _now_iso(),
-                "signal": signal,
-                "tx_signature": str(tx_sig),
-                "input_amount": quote.get("inAmount"),
-                "output_amount": quote.get("outAmount"),
-            }
-            logger.info("EXECUTED %s %s tx=%s", signal.side.upper(), signal.source_symbol, tx_sig)
-            return True
-        except Exception as exc:
-            logger.error("Swap failed %s %s: %s", signal.side, signal.source_symbol, exc)
-            return False
-
-    def close_position(self, symbol: str) -> bool:
-        pos = self.active_positions.get(symbol)
-        if not pos:
-            return False
-        close_signal = TradeSignal(
-            symbol=symbol,
-            side="sell" if pos["side"] == "buy" else "buy",
-            confidence=1.0,
-            source="position_close",
-            source_symbol=(pos.get("signal") or {}).source_symbol if isinstance(pos.get("signal"), TradeSignal) else symbol[:8],
-        )
-        if self.dry_run:
-            logger.info("[DRY-RUN] CLOSE %s", close_signal.source_symbol)
-            self.active_positions.pop(symbol, None)
-            return True
-        return self.execute_signal(close_signal)
 
 
 class HyperliquidCopyExecutor(BinanceCopyExecutor):
@@ -1224,32 +912,6 @@ def build_binance_executor(
     )
 
 
-def build_solana_executor(
-    data_dir: str,
-    dry_run: bool = True,
-    interval: float = 60,
-    max_positions: int = 3,
-    copy_size_sol: float = 0.05,
-    min_win_rate: float = 55,
-    min_trades: int = 50,
-    slippage_bps: int = 200,
-    private_key: str | None = None,
-    rpc_url: str = "https://solana-rpc.publicnode.com",
-) -> SolanaCopyExecutor:
-    return SolanaCopyExecutor(
-        data_dir=data_dir,
-        dry_run=dry_run,
-        interval=interval,
-        max_positions=max_positions,
-        copy_size_sol=copy_size_sol,
-        min_win_rate=min_win_rate,
-        min_trades=min_trades,
-        slippage_bps=slippage_bps,
-        private_key=private_key,
-        rpc_url=rpc_url,
-    )
-
-
 def build_hyperliquid_executor(
     data_dir: str,
     dry_run: bool = True,
@@ -1259,6 +921,7 @@ def build_hyperliquid_executor(
     min_confidence: float = 0.70,
     min_delta_notional: float = 1000.0,
     recent_seconds: int = 900,
+    trusted_wallets_csv: str = "hyperliquid_leaderboard.csv",
     stop_loss_pct: float = 30.0,
     take_profit_pct: float = 50.0,
     max_daily_loss_pct: float = 30.0,
@@ -1274,6 +937,7 @@ def build_hyperliquid_executor(
         min_confidence=min_confidence,
         min_delta_notional=min_delta_notional,
         recent_seconds=recent_seconds,
+        trusted_wallets_csv=trusted_wallets_csv,
         stop_loss_pct=stop_loss_pct,
         take_profit_pct=take_profit_pct,
         max_daily_loss_pct=max_daily_loss_pct,

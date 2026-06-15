@@ -31,8 +31,7 @@ def _import_analyzer():
 
 
 def _import_tracker():
-    from copy_trade.solana_tracker import SolanaRpcTracker, load_wallets_from_performance, load_state, save_state
-    return SolanaRpcTracker, load_wallets_from_performance, load_state, save_state
+    return None
 
 
 class CopyTradeDashboard:
@@ -43,36 +42,21 @@ class CopyTradeDashboard:
         rows: int = 10,
         collect: bool = False,
         collect_interval: float = 120.0,
-        track_interval: float = 30.0,
         okx_url: str = "https://web3.okx.com/copy-trade/leaderboard/solana",
         okx_per_rank_limit: int = 100,
         okx_max_wallets: int = 300,
-        track_wallet_limit: int = 10,
-        track_tx_limit: int = 8,
-        track_min_win_rate: float = 55,
-        track_min_trades: int = 100,
-        track_min_pnl: float = 5000,
-        rpc_url: str = "https://solana-rpc.publicnode.com",
     ):
         self.data_dir = data_dir
         self.refresh = refresh
         self.rows = rows
         self.collect = collect
         self.collect_interval = collect_interval
-        self.track_interval = track_interval
         self.okx_url = okx_url
         self.okx_per_rank_limit = okx_per_rank_limit
         self.okx_max_wallets = okx_max_wallets
-        self.track_wallet_limit = track_wallet_limit
-        self.track_tx_limit = track_tx_limit
-        self.track_min_win_rate = track_min_win_rate
-        self.track_min_trades = track_min_trades
-        self.track_min_pnl = track_min_pnl
-        self.rpc_url = rpc_url
         self.store = CopyTradeStore(data_dir)
         self._stop = threading.Event()
         self._last_collect = 0.0
-        self._last_track = 0.0
         self._pipeline_ok = True
         self._pipeline_msg = ""
 
@@ -108,10 +92,6 @@ class CopyTradeDashboard:
                     self._run_select_wallets()
                     self._run_consensus()
                     self._last_collect = time.time()
-
-                if now - self._last_track >= self.track_interval:
-                    self._run_track_wallets()
-                    self._last_track = time.time()
             except Exception as exc:
                 self._pipeline_ok = False
                 self._pipeline_msg = f"Pipeline error: {exc}"
@@ -235,42 +215,7 @@ class CopyTradeDashboard:
             pass
 
     def _run_track_wallets(self) -> None:
-        perf_csv = os.path.join(self.data_dir, "wallet_performance.csv")
-        if not os.path.exists(perf_csv):
-            return
-        SolanaRpcTracker, load_wallets_from_performance, load_state, save_state = _import_tracker()
-
-        wallets = load_wallets_from_performance(
-            perf_csv,
-            limit=self.track_wallet_limit,
-            min_win_rate=self.track_min_win_rate,
-            min_trades=self.track_min_trades,
-            min_pnl=self.track_min_pnl,
-        )
-        if not wallets:
-            return
-
-        tracker = SolanaRpcTracker(rpc_url=self.rpc_url, sleep_s=0.2)
-        state_path = os.path.join(self.data_dir, "solana_tracker_state.json")
-        state = load_state(state_path)
-
-        all_events = []
-        for wallet in wallets:
-            seen = set(state.get(wallet, []))
-            try:
-                events, newest = tracker.collect_wallet(
-                    wallet=wallet, limit=self.track_tx_limit, seen_signatures=seen,
-                )
-            except Exception:
-                continue
-            if newest:
-                state[wallet] = list(dict.fromkeys(newest + state.get(wallet, [])))[:200]
-            all_events.extend(events)
-
-        if all_events:
-            self.store.append_csv("wallet_trade_events.csv", all_events)
-            self.store.append_jsonl("wallet_trade_events.jsonl", all_events)
-        save_state(state_path, state)
+        return
 
     # ── Panels ──────────────────────────────────────────────
 
