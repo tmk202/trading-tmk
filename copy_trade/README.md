@@ -182,9 +182,33 @@ platform,trader_id,symbol,side,entry_price,mark_price,leverage,size,notional,pnl
 - H3: consensus signal when 70% of selected traders are same direction
 - H4: prefer stable AUM/followers growth over ROI spikes
 
+## Promising Wallet Universe (Tier System)
+
+Tìm ví tiềm năng để copy theo 3 tier, kết hợp OKX Web3 (Solana) + Hyperliquid.
+
+| Tier   | ROI  | Trades (OKX) / Volume (HL) | DD   | WR   | PnL min  | Size mult |
+|--------|------|---------------------------|------|------|----------|-----------|
+| hot    | ≥150%| ≥50 trades / ≥$100M vol  | ≤30% | ≥50% | ≥$10k    | ×2.0      |
+| warm   | ≥80% | ≥30 trades / ≥$50M vol   | ≤40% | ≥40% | ≥$5k     | ×1.0      |
+| explore| ≥50% | ≥20 trades / ≥$20M vol   | ≤50% | —    | ≥$1k     | ×0.5      |
+
+Hyperliquid bỏ qua WR/DD checks (data không có sẵn), chỉ dùng PnL + Volume + AUM + active_24h.
+
+### Build thủ công
+
+```bash
+python3 tier_wallet_universe.py
+# → data/copy_trade/promising_wallets.csv
+```
+
+### Auto trong pipeline
+
+`main_copy_trade.py` chạy Step [3.5/5] sau mỗi collect cycle (~120s). Output: `data/copy_trade/promising_wallets.csv` với columns: platform, tier, wallet, nickname, pnl_30d, roi_pct, sample, position_size_usd, size_mult.
+
 ## Next
 
-1. Find a stable public web endpoint or authenticated read-only source for Bitget/Bybit.
-2. Run daily snapshots for at least 14 days.
-3. Backtest consensus signal against forward BTC/ETH returns.
+1. Refresh OKX + Hyperliquid data mỗi ~2h.
+2. Re-score + re-tier mỗi ~6h (track record drift).
+3. Track real-time position changes từ tier wallets (Hyperliquid fills + position events).
+4. Tie `position_size_usd` từ tier vào executor — hot wallets copy 2x size.
 4. Only then consider paper-trade execution.

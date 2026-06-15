@@ -135,9 +135,9 @@ class CopyTradeBot:
                 platform="okx_web3",
                 top=150,
                 rows=30,
-                min_trades=3,
-                min_pnl=100,
-                min_win_rate=0,
+                min_trades=30,
+                min_pnl=1000,
+                min_win_rate=40,
                 output="",
                 data_dir=self.data_dir,
             )
@@ -147,8 +147,8 @@ class CopyTradeBot:
             logger.warning("[2/5] Scoring failed: %s", exc)
 
     def select_wallets(self) -> None:
-        """Step 2.5: Chọn ví tiềm năng từ performance data."""
-        logger.info("[2.5/5] Selecting potential wallets...")
+        """Step 2.5: Chọn ví tiềm năng từ performance data (conservative)."""
+        logger.info("[2.5/5] Selecting potential wallets (conservative: N>=30, WR>=40%, DD<=40%, ROI>=50%)...")
         try:
             from copy_trade_lab import cmd_select_wallets
             import argparse
@@ -162,10 +162,11 @@ class CopyTradeBot:
                 perf_csv=perf_csv,
                 top=0,
                 rows=50,
-                min_win_rate=30,
-                max_drawdown=100,
-                min_trades=5,
-                min_pnl=500,
+                min_win_rate=40,
+                max_drawdown=40,
+                min_trades=30,
+                min_pnl=1000,
+                min_roi=50,
                 output="",
                 data_dir=self.data_dir,
             )
@@ -205,6 +206,24 @@ class CopyTradeBot:
             logger.info("[3/5] Consensus OK")
         except Exception as exc:
             logger.warning("[3/5] Consensus failed: %s", exc)
+
+    def build_tier_universe(self) -> None:
+        """Step 3.5: Build promising wallet universe (OKX + Hyperliquid, tiered)."""
+        logger.info("[3.5/5] Building promising wallet universe (tiered)...")
+        try:
+            from tier_wallet_universe import build_universe, write_universe
+            output = os.path.join(self.data_dir, "promising_wallets.csv")
+            rows = build_universe(self.data_dir)
+            write_universe(rows, output)
+            hot = sum(1 for c in rows if c.extra.get("tier") == "hot")
+            warm = sum(1 for c in rows if c.extra.get("tier") == "warm")
+            explore = sum(1 for c in rows if c.extra.get("tier") == "explore")
+            logger.info(
+                "[3.5/5] Tier universe OK — %d hot, %d warm, %d explore → %s",
+                hot, warm, explore, output,
+            )
+        except Exception as exc:
+            logger.warning("[3.5/5] Tier universe failed: %s", exc)
 
     def track_hyperliquid(self) -> None:
         """Step 4: Track Hyperliquid wallet positions + fills."""
@@ -332,6 +351,7 @@ class CopyTradeBot:
                 self.score_wallets()
                 self.select_wallets()
                 self.build_consensus()
+                self.build_tier_universe()
                 self.track_hyperliquid()
                 self._last_collect = now
 

@@ -848,9 +848,9 @@ def parse_args() -> argparse.Namespace:
     wallet_perf.add_argument("--platform", default="okx_web3")
     wallet_perf.add_argument("--top", type=int, default=100)
     wallet_perf.add_argument("--rows", type=int, default=30)
-    wallet_perf.add_argument("--min-trades", type=int, default=20)
+    wallet_perf.add_argument("--min-trades", type=int, default=30, help="Conservative: 30+ trades")
     wallet_perf.add_argument("--min-pnl", type=float, default=1000)
-    wallet_perf.add_argument("--min-win-rate", type=float, default=0)
+    wallet_perf.add_argument("--min-win-rate", type=float, default=40, help="Conservative: 40%+")
     wallet_perf.add_argument("--output")
     wallet_perf.add_argument("--data-dir", default=DATA_DIR)
 
@@ -955,10 +955,11 @@ def parse_args() -> argparse.Namespace:
     select_w.add_argument("--perf-csv", default=os.path.join(DATA_DIR, "wallet_performance.csv"))
     select_w.add_argument("--top", type=int, default=0, help="0 = unlimited")
     select_w.add_argument("--rows", type=int, default=50)
-    select_w.add_argument("--min-win-rate", type=float, default=30)
-    select_w.add_argument("--max-drawdown", type=float, default=100)
-    select_w.add_argument("--min-trades", type=int, default=10)
+    select_w.add_argument("--min-win-rate", type=float, default=40, help="Conservative: 40%+")
+    select_w.add_argument("--max-drawdown", type=float, default=40, help="Conservative: 40%<")
+    select_w.add_argument("--min-trades", type=int, default=30, help="Conservative: 30+ trades")
     select_w.add_argument("--min-pnl", type=float, default=1000)
+    select_w.add_argument("--min-roi", type=float, default=50, help="Conservative: 50%+")
     select_w.add_argument("--output")
     select_w.add_argument("--data-dir", default=DATA_DIR)
 
@@ -1192,6 +1193,7 @@ def cmd_select_wallets(args: argparse.Namespace) -> int:
             dd = _to_float(row.get("pnl_history_max_drawdown"))
             tx = _to_float(row.get("tx"))
             pnl = _to_float(row.get("pnl"))
+            roi = _to_float(row.get("roi_pct"))
             if wr is not None and wr < args.min_win_rate:
                 continue
             if dd is not None and dd < -abs(args.max_drawdown):
@@ -1199,6 +1201,8 @@ def cmd_select_wallets(args: argparse.Namespace) -> int:
             if tx is not None and tx < args.min_trades:
                 continue
             if pnl is not None and pnl < args.min_pnl:
+                continue
+            if roi is not None and roi < args.min_roi:
                 continue
             rows.append(row)
 

@@ -6,18 +6,39 @@ from typing import Iterable
 from copy_trade.models import ConsensusSignal, PositionSnapshot, TraderSnapshot, utc_now_iso
 
 
+# Default conservative filters — chỉ chọn ví có sample size đủ lớn
+# và track record rõ ràng để copy.
+DEFAULT_FILTERS: dict[str, float] = {
+    "min_trades": 30.0,
+    "min_win_rate": 40.0,
+    "max_drawdown": 40.0,
+    "min_roi_30d": 50.0,
+    "min_pnl_30d": 1000.0,
+    "min_copy_days": 7.0,
+}
+
+
 def select_traders(
     traders: Iterable[TraderSnapshot],
     limit: int = 10,
-    max_drawdown: float | None = None,
+    min_trades: float | None = None,
     min_win_rate: float | None = None,
+    max_drawdown: float | None = None,
+    min_roi_30d: float | None = None,
+    min_pnl_30d: float | None = None,
     min_copy_days: int | None = None,
 ) -> list[TraderSnapshot]:
     selected = []
     for trader in traders:
-        if max_drawdown is not None and trader.drawdown is not None and trader.drawdown > max_drawdown:
+        if min_trades is not None and trader.total_trades is not None and trader.total_trades < min_trades:
             continue
         if min_win_rate is not None and trader.win_rate is not None and trader.win_rate < min_win_rate:
+            continue
+        if max_drawdown is not None and trader.drawdown is not None and trader.drawdown > max_drawdown:
+            continue
+        if min_roi_30d is not None and trader.roi_30d is not None and trader.roi_30d < min_roi_30d:
+            continue
+        if min_pnl_30d is not None and trader.pnl_30d is not None and trader.pnl_30d < min_pnl_30d:
             continue
         if min_copy_days is not None and trader.copy_trade_days is not None and trader.copy_trade_days < min_copy_days:
             continue
@@ -27,6 +48,7 @@ def select_traders(
         selected,
         key=lambda item: (
             item.roi_30d if item.roi_30d is not None else -10**9,
+            item.pnl_30d if item.pnl_30d is not None else -10**9,
             item.win_rate if item.win_rate is not None else -10**9,
         ),
         reverse=True,
