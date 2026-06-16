@@ -329,6 +329,8 @@ class BinanceFuturesExchange:
 
     def get_ticker(self, symbol: str) -> dict:
         data = self._public("GET", "/fapi/v1/ticker/price", {"symbol": self._symbol(symbol)})
+        if not data or "price" not in data:
+            raise ValueError(f"No price data for {symbol} (symbol may not exist on exchange)")
         return {"last": float(data["price"])}
 
     def _amount_to_precision(self, symbol: str, amount: float) -> float:
