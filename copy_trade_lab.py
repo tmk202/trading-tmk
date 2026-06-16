@@ -94,36 +94,41 @@ def cmd_collect(args: argparse.Namespace) -> int:
 def cmd_okx_sweep(args: argparse.Namespace) -> int:
     rank_modes = _split_csv_arg(args.rank_by)
     periods = _split_csv_arg(args.periods)
+    chain_ids = _split_csv_arg(getattr(args, "chain_ids", args.chain_id))
     seen = set()
     traders: list[TraderSnapshot] = []
     positions: list[PositionSnapshot] = []
 
-    for period in periods:
-        for rank_by in rank_modes:
-            provider = make_provider(
-                "okx_web3",
-                okx_url=args.okx_url,
-                okx_chain_id=args.chain_id,
-                okx_rank_by=rank_by,
-                okx_period=period,
-            )
-            try:
-                batch = provider.fetch_traders(limit=args.per_rank_limit)
-            except ProviderError as exc:
-                print(f"OKX sweep skipped rank_by={rank_by} period={period}: {exc}")
-                continue
-            added = 0
-            for trader in batch:
-                if trader.trader_id in seen:
+    for chain_id in chain_ids:
+        for period in periods:
+            for rank_by in rank_modes:
+                provider = make_provider(
+                    "okx_web3",
+                    okx_url=args.okx_url,
+                    okx_chain_id=chain_id,
+                    okx_rank_by=rank_by,
+                    okx_period=period,
+                )
+                try:
+                    batch = provider.fetch_traders(limit=args.per_rank_limit)
+                except ProviderError as exc:
+                    print(f"OKX sweep skipped chain={chain_id} rank_by={rank_by} period={period}: {exc}")
                     continue
-                seen.add(trader.trader_id)
-                traders.append(trader)
-                added += 1
-                if args.with_positions:
-                    positions.extend(provider.fetch_positions(trader.trader_id))
+                added = 0
+                for trader in batch:
+                    if trader.trader_id in seen:
+                        continue
+                    seen.add(trader.trader_id)
+                    trader.raw["chain_id"] = chain_id
+                    traders.append(trader)
+                    added += 1
+                    if args.with_positions:
+                        positions.extend(provider.fetch_positions(trader.trader_id))
+                    if len(traders) >= args.max_wallets:
+                        break
+                print(f"sweep chain={chain_id} rank_by={rank_by:<8} period={period:<3} fetched={len(batch):<4} added={added:<4} total={len(traders)}")
                 if len(traders) >= args.max_wallets:
                     break
-            print(f"sweep rank_by={rank_by:<8} period={period:<3} fetched={len(batch):<4} added={added:<4} total={len(traders)}")
             if len(traders) >= args.max_wallets:
                 break
         if len(traders) >= args.max_wallets:
@@ -803,7 +808,9 @@ def parse_args() -> argparse.Namespace:
 
     okx_sweep = sub.add_parser("okx-sweep")
     okx_sweep.add_argument("--okx-url", default="https://web3.okx.com/copy-trade/leaderboard/solana")
-    okx_sweep.add_argument("--chain-id", default="501")
+    okx_sweep.add_argument("--chain-id", default="501", help="Deprecated: use --chain-ids")
+    okx_sweep.add_argument("--chain-ids", default="501,1,56,8453",
+                           help="Comma-separated OKX chain IDs: 501=Solana, 1=ETH, 56=BSC, 8453=Base, 137=Polygon")
     okx_sweep.add_argument("--rank-by", default="pnl,roi,win_rate,volume,tx")
     okx_sweep.add_argument("--periods", default="30d")
     okx_sweep.add_argument("--per-rank-limit", type=int, default=100)

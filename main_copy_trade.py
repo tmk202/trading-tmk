@@ -95,8 +95,8 @@ class CopyTradeBot:
     # ── Pipeline steps ────────────────────────────────────
 
     def collect_okx(self) -> None:
-        """Step 1: OKX sweep — lấy traders + positions mới nhất."""
-        logger.info("[1/5] Collecting OKX Web3 traders...")
+        """Step 1: OKX sweep — multi-chain (Solana, ETH, BSC, Base)."""
+        logger.info("[1/5] Collecting OKX Web3 traders (multi-chain)...")
         try:
             from copy_trade_lab import cmd_okx_sweep
             import argparse
@@ -104,6 +104,7 @@ class CopyTradeBot:
             args = argparse.Namespace(
                 okx_url="https://web3.okx.com/copy-trade/leaderboard/solana",
                 chain_id="501",
+                chain_ids="501,1,56,8453",
                 rank_by="pnl,roi,win_rate,volume,tx",
                 periods="30d",
                 per_rank_limit=100,
