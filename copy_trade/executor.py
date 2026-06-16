@@ -251,6 +251,11 @@ class BinanceFuturesExchange:
     def __init__(self):
         from config import Config
 
+        # DEBUG: list all Binance-related env vars
+        for k, v in os.environ.items():
+            if "BINANCE" in k.upper():
+                logger.warning("DEBUG env %s=%.8s (len=%d)", k, v, len(v))
+
         self.api_key = os.getenv("BINANCE_FUTURES_API_KEY") or Config.BINANCE_API_KEY
         secret = os.getenv("BINANCE_FUTURES_SECRET_KEY") or Config.BINANCE_SECRET_KEY
         self.secret = secret.encode("utf-8")
