@@ -132,6 +132,29 @@ class CopyTradeExecutor(ABC):
                 return
             time.sleep(self.interval)
 
+    def _calc_pnl(self, symbol: str, pos: dict[str, Any]) -> float:
+        """Calculate estimated PnL for a closing position."""
+        entry = pos.get("entry_price")
+        if entry is None:
+            signal = pos.get("signal")
+            entry = signal.entry_price if signal and isinstance(signal, TradeSignal) else None
+        if entry is None or not entry:
+            return 0.0
+        side = pos["side"]
+        try:
+            current = pos.get("current_price")
+            if current is None:
+                current = self._get_current_price(symbol)
+            if not current:
+                return 0.0
+            amount = float(pos.get("amount") or 0)
+            if side == "buy":
+                return (current - entry) * amount
+            else:
+                return (entry - current) * amount
+        except Exception:
+            return 0.0
+
     def _check_stop_loss(self, symbol: str) -> None:
         pos = self.active_positions.get(symbol)
         if not pos:
@@ -614,10 +637,14 @@ class HyperliquidCopyExecutor(BinanceCopyExecutor):
             return False
         close_side = "sell" if pos["side"] == "buy" else "buy"
 
+        # Calculate PnL
+        pnl_usd = self._calc_pnl(symbol, pos)
+
         if self.dry_run:
-            logger.info("[DRY-RUN] FUTURES CLOSE %s %s", close_side.upper(), symbol)
+            logger.info("[DRY-RUN] FUTURES CLOSE %s %s pnl=%+.2f", close_side.upper(), symbol, pnl_usd)
             self._log_trade("close_dry", symbol, close_side, None, 0,
-                            "hyperliquid", symbol.split("/")[0], dry_run=True)
+                            "hyperliquid", symbol.split("/")[0],
+                            pnl=pnl_usd, dry_run=True)
             self.active_positions.pop(symbol, None)
             return True
 
@@ -633,10 +660,11 @@ class HyperliquidCopyExecutor(BinanceCopyExecutor):
                 return False
             order = self.exchange.create_market_order(close_side, amount, symbol, reduce_only=True)
             self.active_positions.pop(symbol, None)
-            logger.info("FUTURES CLOSED %s %s %.6f", close_side.upper(), symbol, amount)
+            logger.info("FUTURES CLOSED %s %s %.6f pnl=%+.2f", close_side.upper(), symbol, amount, pnl_usd)
+            self._daily_pnl += pnl_usd
             self._log_trade("close", symbol, close_side, None, 0,
                             "hyperliquid", symbol.split("/")[0],
-                            tx_id=str(order.get("id", "")), dry_run=False)
+                            tx_id=str(order.get("id", "")), pnl=pnl_usd, dry_run=False)
             return True
         except Exception as exc:
             logger.error("Futures close failed %s: %s", symbol, exc)
