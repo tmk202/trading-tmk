@@ -7,6 +7,24 @@ from datetime import datetime
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data", "copy_trade")
 
+BALANCE_CACHE = {"data": None, "time": 0.0}
+
+
+def fetch_balance():
+    now = datetime.now().timestamp()
+    if now - BALANCE_CACHE.get("time", 0) < 10:
+        return BALANCE_CACHE.get("data", {})
+    try:
+        from copy_trade.executor import BinanceFuturesExchange
+        ex = BinanceFuturesExchange()
+        data = ex.fetch_balance()
+        BALANCE_CACHE["data"] = data
+        BALANCE_CACHE["time"] = now
+        return data
+    except Exception:
+        return {}
+
+
 HTML = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -75,6 +93,11 @@ hr{{border:0;border-top:1px solid #1e293b;margin:8px 0}}
 <div class="card">
 <h2 style="font-size:14px;color:#38bdf8;margin-bottom:8px">Recent Trades</h2>
 {trade_table}
+</div>
+
+<div class="card">
+<h2 style="font-size:14px;color:#38bdf8;margin-bottom:8px">Balance</h2>
+{balance_str}
 </div>
 
 <div class="card">
@@ -189,6 +212,22 @@ def make_app(environ, start_response):
         state = read_json("hyperliquid_tracker_state.json")
         last_time = (datetime.now()).strftime("%H:%M:%S")
 
+        # Balance
+        bal = fetch_balance()
+        usdt = bal.get("USDT", {})
+        bal_total = _float(usdt.get("total"))
+        bal_free = _float(usdt.get("free"))
+        bal_margin = bal_total - bal_free
+        bal_color = "green" if bal_total > 5000 else "red"
+        balance_str = (
+            f'<div class="stats">'
+            f'<div class="stat"><div class="stat-value {bal_color}">${bal_total:.0f}</div><div class="stat-label">Total</div></div>'
+            f'<div class="stat"><div class="stat-value blue">${bal_free:.0f}</div><div class="stat-label">Available</div></div>'
+            f'<div class="stat"><div class="stat-value amber">${bal_margin:.0f}</div><div class="stat-label">In Positions</div></div>'
+            f'<div class="stat"><div class="stat-value green">${bal_total - 5000:+.2f}</div><div class="stat-label">Unrealized PnL</div></div>'
+            f'</div>'
+        ) if bal_total > 0 else '<p class="empty">Logging in...</p>'
+
         html = HTML.format(
             cycles=len(set(t.get("timestamp", "")[:10] for t in trades)),
             total_pnl=f"{total_pnl:+.0f}" if total_pnl else "—",
@@ -201,6 +240,7 @@ def make_app(environ, start_response):
             hot_table=f"<table><thead><tr><th></th><th>Wallet</th><th>PnL 30d</th><th>ROI</th><th>WR</th><th>Size</th></tr></thead>{hot_rows}</table>",
             warm_table=f"<table><thead><tr><th></th><th>Wallet</th><th>PnL 30d</th><th>ROI</th><th>WR</th><th>Size</th></tr></thead>{warm_rows}</table>",
             trade_table=f"<table><thead><tr><th>Time</th><th></th><th>Side</th><th>Symbol</th><th>Size</th><th>PnL</th></tr></thead>{trade_rows}</table>",
+            balance_str=balance_str,
             last_time=last_time,
             mode="HL",
             interval="5",
