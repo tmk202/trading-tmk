@@ -27,6 +27,7 @@ table{{width:100%;border-collapse:collapse;font-size:13px}}
 th{{text-align:left;padding:6px 8px;color:#64748b;font-weight:600;border-bottom:1px solid #1e293b;font-size:11px}}
 td{{padding:6px 8px;border-bottom:1px solid #0f172a}}
 .side-buy{{color:#22c55e}}.side-sell{{color:#ef4444}}
+.pnl{{font-weight:600}}
 .tier-hot{{background:#422006;color:#f59e0b;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700}}
 .tier-warm{{background:#1e3a2f;color:#22c55e;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700}}
 .dry{{color:#64748b;font-style:italic}}
@@ -159,11 +160,16 @@ def make_app(environ, start_response):
             symbol = t.get("symbol", "") or t.get("source_symbol", "")
             side = t.get("side", "")
             size = t.get("size_usd", "")
-            pnl = t.get("pnl", "")
+            raw_pnl = _float(t.get("pnl"))
             ts = t.get("timestamp", "")[:19].replace("T", " ")
             is_dry = t.get("dry_run") == "True"
             label = "DR" if is_dry else "LIVE"
             side_class = f"side-{side}" if side in ("buy", "sell") else ""
+            pnl_str = ""
+            pnl_class = ""
+            if raw_pnl:
+                pnl_str = f"{raw_pnl:+.2f}"
+                pnl_class = "green" if raw_pnl > 0 else "red"
             trade_rows += (
                 f"<tr>"
                 f"<td class='dry'>{ts[5:16] if ts else ''}</td>"
@@ -171,6 +177,7 @@ def make_app(environ, start_response):
                 f"<td class='{side_class}'>{side.upper():4}</td>"
                 f"<td>{symbol[:14]}</td>"
                 f"<td>${_float(size):.0f}</td>"
+                f"<td class='{pnl_class}'>{pnl_str}</td>"
                 f"</tr>"
             )
         if not trade_rows:
@@ -193,7 +200,7 @@ def make_app(environ, start_response):
             err_color=err_color,
             hot_table=f"<table><thead><tr><th></th><th>Wallet</th><th>PnL 30d</th><th>ROI</th><th>WR</th><th>Size</th></tr></thead>{hot_rows}</table>",
             warm_table=f"<table><thead><tr><th></th><th>Wallet</th><th>PnL 30d</th><th>ROI</th><th>WR</th><th>Size</th></tr></thead>{warm_rows}</table>",
-            trade_table=f"<table><thead><tr><th>Time</th><th></th><th>Side</th><th>Symbol</th><th>Size</th></tr></thead>{trade_rows}</table>",
+            trade_table=f"<table><thead><tr><th>Time</th><th></th><th>Side</th><th>Symbol</th><th>Size</th><th>PnL</th></tr></thead>{trade_rows}</table>",
             last_time=last_time,
             mode="HL",
             interval="5",
