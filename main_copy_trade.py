@@ -235,11 +235,11 @@ class CopyTradeBot:
             args = argparse.Namespace(
                 wallets_csv=os.path.join(self.data_dir, "hyperliquid_tracking_universe.csv"),
                 leaderboard_url="https://dexly.trade/hyperliquid/leaderboard",
-                wallet_limit=10,
+                wallet_limit=20,
                 wallet_offset=0,
                 active_only=False,
                 emit_initial=False,
-                fill_limit=50,
+                fill_limit=500,
                 interval=3,
                 iterations=1,
                 rows=30,

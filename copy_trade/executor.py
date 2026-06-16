@@ -37,6 +37,9 @@ SYMBOL_MAP = {
     "XMR": "XMR/USDT",
     "CRV": "CRV/USDT",
     "SNX": "SNX/USDT",
+    "LDO": "LDO/USDT",
+    "PENDLE": "PENDLE/USDT",
+    "LIT": "LIT/USDT",
 }
 
 
