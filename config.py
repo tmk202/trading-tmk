@@ -5,8 +5,8 @@ load_dotenv()
 
 
 class Config:
-    BINANCE_API_KEY: str = os.getenv("BINANCE_API_KEY", "")
-    BINANCE_SECRET_KEY: str = os.getenv("BINANCE_SECRET_KEY", "")
+    BINANCE_API_KEY: str = os.getenv("BINANCE_API_KEY", "") or os.getenv("BINANCE_FUTURES_API_KEY", "")
+    BINANCE_SECRET_KEY: str = os.getenv("BINANCE_SECRET_KEY", "") or os.getenv("BINANCE_FUTURES_SECRET_KEY", "")
     BINANCE_TESTNET: bool = os.getenv("BINANCE_TESTNET", "true").lower() == "true"
 
     TELEGRAM_ENABLED: bool = os.getenv("TELEGRAM_BOT_TOKEN", "") != ""
