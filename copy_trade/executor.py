@@ -251,11 +251,6 @@ class BinanceFuturesExchange:
     def __init__(self):
         from config import Config
 
-        # DEBUG: list all Binance-related env vars
-        for k, v in os.environ.items():
-            if "BINANCE" in k.upper():
-                logger.warning("DEBUG env %s=%.8s (len=%d)", k, v, len(v))
-
         self.api_key = os.getenv("BINANCE_FUTURES_API_KEY") or Config.BINANCE_API_KEY
         secret = os.getenv("BINANCE_FUTURES_SECRET_KEY") or Config.BINANCE_SECRET_KEY
         self.secret = secret.encode("utf-8")
@@ -268,10 +263,9 @@ class BinanceFuturesExchange:
         self.session.headers.update({"X-MBX-APIKEY": self.api_key})
         self.markets = self._load_markets()
         logger.info(
-            "Connected to Binance USDT-M Futures (%s) key=%.8s secret_len=%d",
+            "Connected to Binance USDT-M Futures (%s) key=%.8s",
             "TESTNET" if Config.BINANCE_TESTNET else "MAINNET",
             self.api_key,
-            len(secret),
         )
 
     def _symbol(self, symbol: str) -> str:
