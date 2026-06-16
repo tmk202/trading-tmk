@@ -393,7 +393,10 @@ class BinanceCopyExecutor(CopyTradeExecutor):
         try:
             self.exchange = BinanceFuturesExchange()
             usdt = self.exchange.get_free_balance("USDT")
-            logger.info("Binance Futures connected. USDT balance: %.2f", usdt)
+            logger.info(
+                "Binance Futures connected. USDT balance: %.2f (key=%.8s...)",
+                usdt, self.exchange.api_key,
+            )
         except Exception as exc:
             logger.warning("Binance Futures init failed (dry-run will simulate): %s", exc)
 
