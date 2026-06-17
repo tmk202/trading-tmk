@@ -8,6 +8,7 @@ from datetime import datetime
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data", "copy_trade")
 
 BALANCE_CACHE = {"data": None, "time": 0.0}
+POSITION_PNL_CACHE = {"data": {}, "time": 0.0}
 
 
 def fetch_balance():
@@ -23,6 +24,35 @@ def fetch_balance():
         return data
     except Exception:
         return {}
+
+
+def fetch_unrealized_pnl(symbol):
+    now = datetime.now().timestamp()
+    cache = POSITION_PNL_CACHE
+    if now - cache.get("time", 0) < 10:
+        return cache["data"].get(symbol)
+    try:
+        from copy_trade.executor import BinanceFuturesExchange
+        ex = BinanceFuturesExchange()
+        result = {}
+        syms = set()
+        for name in os.listdir(DATA_DIR):
+            if name == "trade_history.csv":
+                with open(os.path.join(DATA_DIR, name)) as f:
+                    for r in csv.DictReader(f):
+                        if r.get("action") == "open" and r.get("dry_run") == "False":
+                            s = r.get("symbol", "")
+                            if "/" in s:
+                                syms.add(s)
+        for sym in syms:
+            data = ex._signed("GET", "/fapi/v2/positionRisk", {"symbol": ex._symbol(sym)})
+            if data and isinstance(data, list) and len(data) > 0:
+                result[sym] = float(data[0].get("unRealizedProfit", 0))
+        cache["data"] = result
+        cache["time"] = now
+        return result.get(symbol)
+    except Exception:
+        return None
 
 
 HTML = """<!DOCTYPE html>
@@ -184,15 +214,21 @@ def make_app(environ, start_response):
             side = t.get("side", "")
             size = t.get("size_usd", "")
             raw_pnl = _float(t.get("pnl"))
-            ts = t.get("timestamp", "")[:19].replace("T", " ")
             is_dry = t.get("dry_run") == "True"
+            is_live_open = (action == "open" and not is_dry and not raw_pnl)
+            ts = t.get("timestamp", "")[:19].replace("T", " ")
             label = "DR" if is_dry else "LIVE"
             side_class = f"side-{side}" if side in ("buy", "sell") else ""
             pnl_str = ""
             pnl_class = ""
-            if raw_pnl:
-                pnl_str = f"{raw_pnl:+.2f}"
-                pnl_class = "green" if raw_pnl > 0 else "red"
+            display_pnl = raw_pnl
+            if is_live_open:
+                live_pnl = fetch_unrealized_pnl(symbol)
+                if live_pnl is not None:
+                    display_pnl = live_pnl
+            if display_pnl:
+                pnl_str = f"{display_pnl:+.2f}"
+                pnl_class = "green" if display_pnl > 0 else "red"
             trade_rows += (
                 f"<tr>"
                 f"<td class='dry'>{ts[5:16] if ts else ''}</td>"
