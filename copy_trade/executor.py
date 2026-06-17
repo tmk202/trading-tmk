@@ -100,6 +100,8 @@ class CopyTradeExecutor(ABC):
             logger.warning("Circuit breaker active — no new trades")
             return []
 
+        self._sync_positions()
+
         # Kiểm tra SL/TP cho các positions đang mở
         for sym in list(self.active_positions.keys()):
             self._check_stop_loss(sym)
@@ -116,6 +118,10 @@ class CopyTradeExecutor(ABC):
             if key not in self.active_positions:
                 self.execute_signal(signal)
         return signals
+
+    def _sync_positions(self) -> None:
+        """Sync active_positions with exchange. Override in subclasses."""
+        pass
 
     def run_loop(self, iterations: int = 0) -> None:
         count = 0
@@ -389,6 +395,16 @@ class BinanceFuturesExchange:
                     side.upper(), order_symbol, precise_amount, reduce_only)
         return self._signed("POST", "/fapi/v1/order", params)
 
+    def fetch_position(self, symbol: str) -> float:
+        """Return absolute position amount. 0 = no position."""
+        try:
+            data = self._signed("GET", "/fapi/v2/positionRisk", {"symbol": self._symbol(symbol)})
+            if data and isinstance(data, list) and len(data) > 0:
+                return abs(float(data[0].get("positionAmt", 0)))
+        except Exception:
+            pass
+        return 0.0
+
 
 class BinanceCopyExecutor(CopyTradeExecutor):
     def __init__(
@@ -426,6 +442,22 @@ class BinanceCopyExecutor(CopyTradeExecutor):
             )
         except Exception as exc:
             logger.warning("Binance Futures init failed (dry-run will simulate): %s", exc)
+
+    def _sync_positions(self) -> None:
+        if self.dry_run or self.exchange is None:
+            return
+        removed = 0
+        for sym in list(self.active_positions.keys()):
+            try:
+                amt = self.exchange.fetch_position(sym)
+                if amt == 0.0:
+                    logger.info("Position %s no longer on exchange, removing from tracker", sym)
+                    self.active_positions.pop(sym, None)
+                    removed += 1
+            except Exception:
+                pass
+        if removed:
+            logger.info("Synced positions: removed %d stale entries", removed)
 
     def collect_signals(self) -> list[TradeSignal]:
         return self._collect_macro_sentiment()
