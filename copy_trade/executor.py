@@ -456,8 +456,27 @@ class BinanceCopyExecutor(CopyTradeExecutor):
                     removed += 1
             except Exception:
                 pass
-        if removed:
-            logger.info("Synced positions: removed %d stale entries", removed)
+        # Rebuild: scan active positions on exchange, add missing ones to memory
+        rebuilt = 0
+        for sym in list(SYMBOL_MAP.values()):
+            if sym in self.active_positions:
+                continue
+            try:
+                data = self.exchange._signed("GET", "/fapi/v2/positionRisk", {"symbol": self.exchange._symbol(sym)})
+                if data and isinstance(data, list) and len(data) > 0:
+                    amt = abs(float(data[0].get("positionAmt", 0)))
+                    if amt > 0:
+                        side = "buy" if float(data[0].get("positionAmt", 0)) > 0 else "sell"
+                        self.active_positions[sym] = {
+                            "side": side,
+                            "entry_price": float(data[0].get("entryPrice", 0)),
+                            "entry_time": _now_iso(),
+                        }
+                        rebuilt += 1
+            except Exception:
+                pass
+        if removed or rebuilt:
+            logger.info("Synced positions: removed %d stale, rebuilt %d from exchange", removed, rebuilt)
 
     def collect_signals(self) -> list[TradeSignal]:
         return self._collect_macro_sentiment()
@@ -524,6 +543,12 @@ class BinanceCopyExecutor(CopyTradeExecutor):
         if len(self.active_positions) >= self.max_positions:
             logger.info("Max positions reached (%d), skip %s %s", self.max_positions, signal.side, signal.symbol)
             return False
+
+        if not self.dry_run and self.exchange is not None:
+            amt = self.exchange.fetch_position(signal.symbol)
+            if amt > 0:
+                logger.info("Skip %s %s — already have position on exchange", signal.side.upper(), signal.symbol)
+                return False
 
         if self.dry_run:
             logger.info(
