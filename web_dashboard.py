@@ -228,14 +228,21 @@ def make_app(environ, start_response):
         # -- Trade table --
         recent = trades[-20:][::-1]
         trade_rows = ""
+        seen_symbols = set()
         for t in recent:
             action = t.get("action", "")
             symbol = t.get("symbol", "") or t.get("source_symbol", "")
+            is_live = t.get("dry_run") != "True" and action == "open"
+            # Dedup: for LIVE trades, show only latest per symbol
+            if is_live:
+                if symbol in seen_symbols:
+                    continue
+                seen_symbols.add(symbol)
+            is_dry = t.get("dry_run") == "True"
+            is_live_open = (action == "open" and not is_dry and not _float(t.get("pnl")))
             side = t.get("side", "")
             size = t.get("size_usd", "")
             raw_pnl = _float(t.get("pnl"))
-            is_dry = t.get("dry_run") == "True"
-            is_live_open = (action == "open" and not is_dry and not raw_pnl)
             ts = t.get("timestamp", "")[:19].replace("T", " ")
             label = "DR" if is_dry else "LIVE"
             side_class = f"side-{side}" if side in ("buy", "sell") else ""
