@@ -179,10 +179,16 @@ def make_app(environ, start_response):
         trades = read_csv("trade_history.csv")
         promising = read_csv("promising_wallets.csv")
 
+        # Populate position cache upfront
+        fetch_unrealized_pnl("")
+
         # -- Stats --
-        live_opens = [t for t in trades if t.get("action") == "open" and t.get("dry_run") == "False"]
+        pos_count = 0
+        pnl_data = POSITION_PNL_CACHE.get("data", {})
+        if pnl_data:
+            pos_count = sum(1 for v in pnl_data.values() if isinstance(v, dict) and v.get("notional", 0) > 0)
         closed = [t for t in trades if "close" in (t.get("action") or "")]
-        total_pnl = sum(_float(t.get("pnl") or 0) for t in closed)
+        total_pnl = sum(display_pnl for display_pnl in (_float(t.get("pnl") or 0) for t in closed))
 
         hot = [r for r in promising if r.get("tier") == "hot"]
         warm = [r for r in promising if r.get("tier") == "warm"]
@@ -286,7 +292,7 @@ def make_app(environ, start_response):
             cycles=len(set(t.get("timestamp", "")[:10] for t in trades)),
             total_pnl=f"{total_pnl:+.0f}" if total_pnl else "—",
             pnl_color=pnl_color,
-            positions=len(live_opens),
+            positions=pos_count,
             hot_count=len(hot),
             warm_count=len(warm),
             errors=sum(1 for t in trades if "error" in (t.get("action") or "").lower()),
@@ -298,7 +304,7 @@ def make_app(environ, start_response):
             last_time=last_time,
             mode="HL",
             interval="5",
-            dry_label="LIVE" if live_opens else "IDLE",
+            dry_label="LIVE" if pos_count > 0 else "IDLE",
         )
 
         start_response("200 OK", [("Content-Type", "text/html; charset=utf-8")])
