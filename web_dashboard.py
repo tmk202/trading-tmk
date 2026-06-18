@@ -27,10 +27,14 @@ def fetch_balance():
 
 
 def fetch_unrealized_pnl(symbol):
+    """Return (pnl_usd, notional, pnl_pct) or (None, None, None)."""
     now = datetime.now().timestamp()
     cache = POSITION_PNL_CACHE
     if now - cache.get("time", 0) < 10:
-        return cache["data"].get(symbol)
+        item = cache["data"].get(symbol)
+        if item:
+            return item.get("pnl"), item.get("notional"), item.get("pnl_pct")
+        return None, None, None
     try:
         from copy_trade.executor import BinanceFuturesExchange
         ex = BinanceFuturesExchange()
@@ -47,12 +51,22 @@ def fetch_unrealized_pnl(symbol):
         for sym in syms:
             data = ex._signed("GET", "/fapi/v2/positionRisk", {"symbol": ex._symbol(sym)})
             if data and isinstance(data, list) and len(data) > 0:
-                result[sym] = float(data[0].get("unRealizedProfit", 0))
+                p = data[0]
+                amt = abs(float(p.get("positionAmt", 0)))
+                entry = float(p.get("entryPrice", 0))
+                mark = float(p.get("markPrice", 0))
+                pnl = float(p.get("unRealizedProfit", 0))
+                notional = amt * mark if amt and mark else 0
+                pct = (pnl / (notional - pnl) * 100) if notional and notional != pnl else 0
+                result[sym] = {"pnl": pnl, "notional": notional, "pnl_pct": pct}
         cache["data"] = result
         cache["time"] = now
-        return result.get(symbol)
+        item = result.get(symbol)
+        if item:
+            return item.get("pnl"), item.get("notional"), item.get("pnl_pct")
     except Exception:
-        return None
+        pass
+    return None, None, None
 
 
 HTML = """<!DOCTYPE html>
@@ -221,13 +235,17 @@ def make_app(environ, start_response):
             side_class = f"side-{side}" if side in ("buy", "sell") else ""
             pnl_str = ""
             pnl_class = ""
+            display_size = f"${_float(size):.0f}"
             display_pnl = raw_pnl
             if is_live_open:
-                live_pnl = fetch_unrealized_pnl(symbol)
+                live_pnl, live_notional, live_pct = fetch_unrealized_pnl(symbol)
                 if live_pnl is not None:
                     display_pnl = live_pnl
+                    if live_notional:
+                        display_size = f"${live_notional:.0f}"
             if display_pnl:
-                pnl_str = f"{display_pnl:+.2f}"
+                pct_str = f" ({live_pct:+.1f}%)" if is_live_open and live_pct else ""
+                pnl_str = f"{display_pnl:+.2f}{pct_str}"
                 pnl_class = "green" if display_pnl > 0 else "red"
             trade_rows += (
                 f"<tr>"
@@ -235,7 +253,7 @@ def make_app(environ, start_response):
                 f"<td class='dry'>{label}</td>"
                 f"<td class='{side_class}'>{side.upper():4}</td>"
                 f"<td>{symbol[:14]}</td>"
-                f"<td>${_float(size):.0f}</td>"
+                f"<td>{display_size}</td>"
                 f"<td class='{pnl_class}'>{pnl_str}</td>"
                 f"</tr>"
             )
