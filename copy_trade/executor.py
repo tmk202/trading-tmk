@@ -341,7 +341,14 @@ class BinanceFuturesExchange:
         payload["signature"] = signature
         resp = self.session.request(method, f"{self.base_url}{path}", params=payload, timeout=20)
         resp.raise_for_status()
-        return resp.json()
+        if not resp.text or not resp.text.strip():
+            logger.warning("_signed empty response for %s %s", method, path)
+            return {}
+        try:
+            return resp.json()
+        except Exception:
+            logger.warning("_signed non-JSON response for %s %s: %s", method, path, resp.text[:200])
+            return {}
 
     def fetch_balance(self) -> dict:
         data = self._signed("GET", "/fapi/v2/account")

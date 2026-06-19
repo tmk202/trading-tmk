@@ -81,12 +81,15 @@ class CopyTradeBot:
         self._last_collect = 0.0
         self._binance_executor = None
         self._hyperliquid_executor = None
+        self._forex_executor = None
         self.stats: dict[str, Any] = {
             "cycles": 0,
             "binance_signals": 0,
             "hyperliquid_signals": 0,
+            "forex_signals": 0,
             "binance_trades": 0,
             "hyperliquid_trades": 0,
+            "forex_trades": 0,
             "errors": 0,
             "last_cycle_time": "",
             "last_error": "",
@@ -252,6 +255,23 @@ class CopyTradeBot:
         except Exception as exc:
             logger.warning("[4/5] Tracking failed: %s", exc)
 
+    def collect_forex(self) -> None:
+        """Collect forex trader data (MQL5 signals)."""
+        logger.info("[forex] Collecting MQL5 forex signals...")
+        try:
+            from copy_trade.forex_provider import MQL5SignalsProvider
+            from copy_trade.storage import CopyTradeStore
+
+            provider = MQL5SignalsProvider()
+            store = CopyTradeStore(self.data_dir)
+
+            traders = provider.fetch_traders(limit=50)
+            store.append_csv("forex_traders.csv", traders)
+            store.append_jsonl("forex_traders.jsonl", traders)
+            logger.info("[forex] Collected %d MQL5 signal providers", len(traders))
+        except Exception as exc:
+            logger.warning("[forex] Collect failed: %s", exc)
+
     def execute_trades(self) -> None:
         """Step 5: Execute copy trades."""
         logger.info("[5/5] Executing copy trades (dry_run=%s, mode=%s)...", self.dry_run, self.mode)
@@ -260,6 +280,8 @@ class CopyTradeBot:
             self._execute_binance()
         if self.mode in ("hyperliquid", "both"):
             self._execute_hyperliquid()
+        if self.mode == "forex":
+            self._execute_forex()
 
     def _get_binance_executor(self):
         if self._binance_executor is None:
@@ -269,10 +291,10 @@ class CopyTradeBot:
                 dry_run=self.dry_run,
                 interval=9999,
                 max_positions=self.max_positions,
-                position_size_usd=self.position_size_usd,
+                position_size_usd=self.position_size_usd * 5,
                 min_confidence=self.min_confidence,
-                stop_loss_pct=8.0,
-                take_profit_pct=15.0,
+                stop_loss_pct=5.0,
+                take_profit_pct=5.0,
                 max_daily_loss_pct=10.0,
                 max_consecutive_losses=3,
                 total_capital=10000.0,
@@ -287,17 +309,35 @@ class CopyTradeBot:
                 dry_run=self.dry_run,
                 interval=9999,
                 max_positions=self.max_positions,
-                position_size_usd=self.position_size_usd,
+                position_size_usd=self.position_size_usd * 5,
                 min_confidence=max(self.min_confidence, 0.65),
                 min_delta_notional=100.0,
                 recent_seconds=604800,
-                stop_loss_pct=8.0,
-                take_profit_pct=15.0,
+                stop_loss_pct=5.0,
+                take_profit_pct=5.0,
                 max_daily_loss_pct=10.0,
                 max_consecutive_losses=3,
                 total_capital=10000.0,
             )
         return self._hyperliquid_executor
+
+    def _get_forex_executor(self):
+        if self._forex_executor is None:
+            from copy_trade.forex_executor import build_forex_executor
+            self._forex_executor = build_forex_executor(
+                data_dir=self.data_dir,
+                dry_run=self.dry_run,
+                interval=9999,
+                max_positions=self.max_positions,
+                position_size_usd=self.position_size_usd * 10,
+                min_confidence=self.min_confidence,
+                stop_loss_pct=5.0,
+                take_profit_pct=10.0,
+                max_daily_loss_pct=10.0,
+                max_consecutive_losses=3,
+                total_capital=5000.0,
+            )
+        return self._forex_executor
 
     def _execute_binance(self) -> None:
         try:
@@ -337,6 +377,26 @@ class CopyTradeBot:
             logger.warning("[5/5] Hyperliquid execution error: %s", exc)
             self.stats["errors"] += 1
 
+    def _execute_forex(self) -> None:
+        try:
+            ex = self._get_forex_executor()
+            signals = ex.run_once()
+            self.stats["forex_signals"] = len(signals)
+            self.stats["forex_trades"] = len(ex.active_positions)
+
+            for pos in ex.active_positions.values():
+                sig = pos.get("signal")
+                if sig and isinstance(sig, TradeSignal):
+                    logger.info(
+                        "[5/5] Forex ACTIVE %s %s $%.0f (%.0f%% conf, %d traders)",
+                        sig.side.upper(), sig.symbol, sig.size_usd,
+                        sig.confidence * 100, sig.trader_count,
+                    )
+            logger.info("[5/5] Forex: %d new signals, %d active positions", len(signals), len(ex.active_positions))
+        except Exception as exc:
+            logger.warning("[5/5] Forex execution error: %s", exc)
+            self.stats["errors"] += 1
+
     # ── Main cycle ────────────────────────────────────────
 
     def run_cycle(self) -> None:
@@ -347,7 +407,9 @@ class CopyTradeBot:
         logger.info("=" * 50)
 
         try:
-            if now - self._last_collect >= self.collect_interval:
+            if self.mode == "forex":
+                self.collect_forex()
+            elif now - self._last_collect >= self.collect_interval:
                 self.collect_okx()
                 self.score_wallets()
                 self.select_wallets()
@@ -366,10 +428,11 @@ class CopyTradeBot:
         self.stats["last_cycle_time"] = datetime.now().strftime("%H:%M:%S")
 
         logger.info("-" * 50)
-        logger.info("CYCLE DONE  | cycles=%d | bin=%d/%d | hl=%d/%d | errors=%d",
+        logger.info("CYCLE DONE  | cycles=%d | bin=%d/%d | hl=%d/%d | fx=%d/%d | errors=%d",
                      self.stats["cycles"],
                      self.stats["binance_signals"], self.stats["binance_trades"],
                      self.stats["hyperliquid_signals"], self.stats["hyperliquid_trades"],
+                     self.stats["forex_signals"], self.stats["forex_trades"],
                      self.stats["errors"])
         logger.info("=" * 50)
 
@@ -383,10 +446,14 @@ class CopyTradeBot:
                 f"<b>Copy Trade Bot — {mode_str}</b>\n"
                 f"Mode: {self.mode.upper()}\n"
                 f"Cycles: {self.stats['cycles']}\n"
-                f"Binance Futures: {self.stats['binance_trades']} active / {self.stats['binance_signals']} total\n"
-                f"Hyperliquid: {self.stats['hyperliquid_trades']} active / {self.stats['hyperliquid_signals']} total\n"
-                f"Errors: {self.stats['errors']}"
             )
+            if self.mode in ("binance", "both"):
+                msg += f"Binance Futures: {self.stats['binance_trades']} active / {self.stats['binance_signals']} total\n"
+            if self.mode in ("hyperliquid", "both"):
+                msg += f"Hyperliquid: {self.stats['hyperliquid_trades']} active / {self.stats['hyperliquid_signals']} total\n"
+            if self.mode == "forex":
+                msg += f"Forex: {self.stats['forex_trades']} active / {self.stats['forex_signals']} total\n"
+            msg += f"Errors: {self.stats['errors']}"
             if self.stats["last_error"]:
                 msg += f"\nLast error: {self.stats['last_error']}"
             self.notifier.send(msg)
@@ -426,11 +493,11 @@ class CopyTradeBot:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Copy Trade Bot — Binance Futures (Hyperliquid cross-venue)")
     parser.add_argument("--once", action="store_true", help="Run one cycle then exit")
-    parser.add_argument("--dry-run", action="store_true", default=True,
+    parser.add_argument("--dry-run", action="store_true", default=False,
                         help="Paper trading / không đánh thật")
     parser.add_argument("--no-dry-run", action="store_false", dest="dry_run",
                         help="Đánh thật (cần API keys)")
-    parser.add_argument("--mode", choices=["binance", "hyperliquid", "both"], default="hyperliquid")
+    parser.add_argument("--mode", choices=["binance", "hyperliquid", "both", "forex"], default="hyperliquid")
     parser.add_argument("--interval", type=int, default=15, help="Minutes between cycles")
     parser.add_argument("--collect-interval", type=int, default=120, help="Seconds between OKX sweeps")
     parser.add_argument("--max-positions", type=int, default=3)

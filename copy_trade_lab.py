@@ -976,7 +976,7 @@ def parse_args() -> argparse.Namespace:
     pnl.add_argument("--data-dir", default=DATA_DIR)
 
     execute = sub.add_parser("execute")
-    execute.add_argument("--mode", choices=["binance", "hyperliquid", "both"], default="hyperliquid")
+    execute.add_argument("--mode", choices=["binance", "hyperliquid", "both", "forex"], default="hyperliquid")
     execute.add_argument("--dry-run", action="store_true", default=True)
     execute.add_argument("--no-dry-run", action="store_false", dest="dry_run")
     execute.add_argument("--interval", type=float, default=60)
@@ -991,6 +991,27 @@ def parse_args() -> argparse.Namespace:
     execute.add_argument("--max-daily-loss-pct", type=float, default=10.0)
     execute.add_argument("--max-consecutive-losses", type=int, default=3)
     execute.add_argument("--data-dir", default=DATA_DIR)
+
+    forex_collect = sub.add_parser("forex-collect", help="Collect forex traders from MQL5 or CSV")
+    forex_collect.add_argument("--provider", choices=["mql5", "csv"], default="mql5")
+    forex_collect.add_argument("--limit", type=int, default=50)
+    forex_collect.add_argument("--traders-csv")
+    forex_collect.add_argument("--positions-csv")
+    forex_collect.add_argument("--data-dir", default=DATA_DIR)
+
+    forex_exec = sub.add_parser("forex-execute", help="Run forex copy trade executor")
+    forex_exec.add_argument("--dry-run", action="store_true", default=True)
+    forex_exec.add_argument("--no-dry-run", action="store_false", dest="dry_run")
+    forex_exec.add_argument("--interval", type=float, default=60)
+    forex_exec.add_argument("--iterations", type=int, default=0)
+    forex_exec.add_argument("--max-positions", type=int, default=3)
+    forex_exec.add_argument("--position-size-usd", type=float, default=1000)
+    forex_exec.add_argument("--min-confidence", type=float, default=0.60)
+    forex_exec.add_argument("--stop-loss-pct", type=float, default=5.0)
+    forex_exec.add_argument("--take-profit-pct", type=float, default=10.0)
+    forex_exec.add_argument("--max-daily-loss-pct", type=float, default=10.0)
+    forex_exec.add_argument("--max-consecutive-losses", type=int, default=3)
+    forex_exec.add_argument("--data-dir", default=DATA_DIR)
 
     return parser.parse_args()
 
@@ -1327,12 +1348,68 @@ def cmd_pnl_report(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_forex_collect(args: argparse.Namespace) -> int:
+    from copy_trade.forex_provider import make_forex_provider
+    from copy_trade.storage import CopyTradeStore
+
+    provider = make_forex_provider(
+        args.provider,
+        traders_csv=args.traders_csv,
+        positions_csv=args.positions_csv,
+    )
+    store = CopyTradeStore(args.data_dir)
+
+    try:
+        traders = provider.fetch_traders(limit=args.limit)
+    except Exception as exc:
+        print(f"Forex collect failed: {exc}")
+        return 2
+
+    traders_path = store.append_csv("forex_traders.csv", traders)
+    store.append_jsonl("forex_traders.jsonl", traders)
+    print(f"Saved forex traders: {len(traders)} -> {traders_path}")
+
+    if args.provider == "csv" and args.positions_csv:
+        csv_provider = make_forex_provider("csv", traders_csv=args.traders_csv, positions_csv=args.positions_csv)
+        positions = csv_provider.fetch_all_positions()
+        if positions:
+            positions_path = store.append_csv("forex_positions.csv", positions)
+            store.append_jsonl("forex_positions.jsonl", positions)
+            print(f"Saved forex positions: {len(positions)} -> {positions_path}")
+
+    return 0
+
+
+def cmd_forex_execute(args: argparse.Namespace) -> int:
+    from copy_trade.executor import CopyTradeOrchestrator
+    from copy_trade.forex_executor import build_forex_executor
+
+    orch = CopyTradeOrchestrator(data_dir=args.data_dir, dry_run=args.dry_run)
+    executor = build_forex_executor(
+        data_dir=args.data_dir,
+        dry_run=args.dry_run,
+        interval=args.interval,
+        max_positions=args.max_positions,
+        position_size_usd=args.position_size_usd,
+        min_confidence=args.min_confidence,
+        stop_loss_pct=args.stop_loss_pct,
+        take_profit_pct=args.take_profit_pct,
+        max_daily_loss_pct=args.max_daily_loss_pct,
+        max_consecutive_losses=args.max_consecutive_losses,
+    )
+    orch.add(executor)
+    print(f"Forex executor (dry_run={args.dry_run}, interval={args.interval}s)")
+    orch.run_loop(iterations=args.iterations)
+    return 0
+
+
 def cmd_execute(args: argparse.Namespace) -> int:
     from copy_trade.executor import (
         CopyTradeOrchestrator,
         build_binance_executor,
         build_hyperliquid_executor,
     )
+    from copy_trade.forex_executor import build_forex_executor
 
     orch = CopyTradeOrchestrator(data_dir=args.data_dir, dry_run=args.dry_run)
 
@@ -1369,6 +1446,22 @@ def cmd_execute(args: argparse.Namespace) -> int:
         )
         orch.add(executor)
         print(f"Hyperliquid executor added (dry_run={args.dry_run}, interval={args.interval}s)")
+
+    if args.mode == "forex":
+        executor = build_forex_executor(
+            data_dir=args.data_dir,
+            dry_run=args.dry_run,
+            interval=args.interval,
+            max_positions=args.max_positions,
+            position_size_usd=args.position_size_usd * 10,
+            min_confidence=args.min_confidence,
+            stop_loss_pct=args.stop_loss_pct,
+            take_profit_pct=args.take_profit_pct,
+            max_daily_loss_pct=args.max_daily_loss_pct,
+            max_consecutive_losses=args.max_consecutive_losses,
+        )
+        orch.add(executor)
+        print(f"Forex executor added (dry_run={args.dry_run}, interval={args.interval}s)")
 
     print(f"\nStarting copy trade execution...")
     orch.run_loop(iterations=args.iterations)
@@ -1428,6 +1521,10 @@ def main() -> int:
         return cmd_pnl_report(args)
     if args.command == "execute":
         return cmd_execute(args)
+    if args.command == "forex-collect":
+        return cmd_forex_collect(args)
+    if args.command == "forex-execute":
+        return cmd_forex_execute(args)
     raise ValueError(args.command)
 
 

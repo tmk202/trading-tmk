@@ -25,4 +25,9 @@ class Config:
     TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
     TELEGRAM_CHAT_ID: str = os.getenv("TELEGRAM_CHAT_ID", "")
 
+    CTRADER_CLIENT_ID: str = os.getenv("CTRADER_CLIENT_ID", "")
+    CTRADER_CLIENT_SECRET: str = os.getenv("CTRADER_CLIENT_SECRET", "")
+    CTRADER_ACCOUNT_ID: str = os.getenv("CTRADER_ACCOUNT_ID", "")
+    CTRADER_DEMO: bool = os.getenv("CTRADER_DEMO", "true").lower() == "true"
+
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
