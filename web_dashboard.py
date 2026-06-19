@@ -57,8 +57,9 @@ def fetch_unrealized_pnl(symbol):
                 mark = float(p.get("markPrice", 0))
                 pnl = float(p.get("unRealizedProfit", 0))
                 notional = amt * mark if amt and mark else 0
-                pct = (pnl / (notional - pnl) * 100) if notional and notional != pnl else 0
-                result[sym] = {"pnl": pnl, "notional": notional, "pnl_pct": pct}
+                is_long = float(p.get("positionAmt", 0)) > 0
+                pct_price = ((mark - entry) if is_long else (entry - mark)) / entry * 100 if entry else 0
+                result[sym] = {"pnl": pnl, "notional": notional, "pnl_pct": round(pct_price, 1)}
         cache["data"] = result
         cache["time"] = now
         item = result.get(symbol)
@@ -257,7 +258,7 @@ def make_app(environ, start_response):
                     if live_notional:
                         display_size = f"${live_notional:.0f}"
             if display_pnl:
-                pct_str = f" ({live_pct:+.1f}%)" if is_live_open and live_pct else ""
+                pct_str = f" ({live_pct:+.1f}%)" if is_live_open and live_pct is not None else ""
                 pnl_str = f"{display_pnl:+.2f}{pct_str}"
                 pnl_class = "green" if display_pnl > 0 else "red"
             trade_rows += (
