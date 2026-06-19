@@ -11,7 +11,7 @@ from copy_trade.executor import BinanceFuturesExchange, SYMBOL_MAP as _SYMBOLS
 
 # Rich might not be installed — fallback to plain text
 try:
-    from rich.console import Console
+    from rich.console import Console, Group
     from rich.table import Table
     from rich.live import Live
     from rich.text import Text
@@ -71,21 +71,18 @@ def render_plain(total, free, margin, positions, pnl_sum):
 
 
 def render_rich(console, total, free, margin, positions, pnl_sum):
-    tg = Table.grid(padding=(0, 2))
-    tg.add_column()
-    tg.add_column()
+    from rich.panel import Panel
+
     pnl_color = "green" if pnl_sum >= 0 else "red"
+
+    tg = Table.grid(padding=(0, 4))
+    tg.add_column(); tg.add_column(); tg.add_column(); tg.add_column()
+    tg.add_column(); tg.add_column(); tg.add_column(); tg.add_column()
     tg.add_row(
-        Text(f"Balance: ", style="dim"),
-        Text(f"${total:,.2f}", style="cyan"),
-        Text("  Free: ", style="dim"),
-        Text(f"${free:,.2f}", style="cyan"),
-        Text("  Margin: ", style="dim"),
-        Text(f"${margin:,.2f}", style="yellow"),
-        Text("  PnL: ", style="dim"),
-        Text(f"${pnl_sum:+,.2f}", style=pnl_color),
-        Text("  Active: ", style="dim"),
-        Text(f"{len(positions)}", style="cyan"),
+        Text("Balance:", style="dim"), Text(f"${total:,.2f}", style="cyan"),
+        Text("Free:", style="dim"), Text(f"${free:,.2f}", style="cyan"),
+        Text("Margin:", style="dim"), Text(f"${margin:,.2f}", style="yellow"),
+        Text("PnL:", style="dim"), Text(f"${pnl_sum:+,.2f}", style=pnl_color),
     )
 
     t = Table(show_header=True, box=None, padding=(0, 1))
@@ -97,21 +94,22 @@ def render_rich(console, total, free, margin, positions, pnl_sum):
     t.add_column("PnL", justify="right", width=8)
     t.add_column("%", justify="right", width=6)
 
-    for side, sym, amt, entry, mark, pnl, pct in positions:
-        color = "green" if pnl >= 0 else "red"
+    for side, sym, amt, entry, mark, pnl_val, pct in positions:
+        color = "green" if pnl_val >= 0 else "red"
         t.add_row(
-            side,
-            sym,
-            f"{amt:.4f}",
-            f"{entry:.2f}",
-            f"{mark:.2f}",
-            f"[{color}]${pnl:+.2f}[/]",
-            f"[{color}]{pct:+.1f}%[/]",
+            side, sym, f"{amt:.4f}", f"{entry:.2f}", f"{mark:.2f}",
+            f"[{color}]${pnl_val:+.2f}[/]", f"[{color}]{pct:+.1f}%[/]",
         )
 
-    t.add_row("", Text(f"— {len(positions)} positions", style="dim"), "", "", "", Text(f"${pnl_sum:+,.2f}", style=pnl_color), "")
+    t.add_row(
+        "", Text(f"— {len(positions)} positions", style="dim"), "", "", "",
+        Text(f"${pnl_sum:+,.2f}", style=pnl_color), "",
+    )
 
-    return [tg, t]
+    from rich.console import Group, RenderableType
+
+    footer = Text(f"\nCtrl+C to quit | Refresh 5s | {datetime.now().strftime('%H:%M:%S')}", style="dim")
+    return Group(tg, t, footer)
 
 
 def main():
@@ -123,7 +121,7 @@ def main():
         with Live(console=console, refresh_per_second=1, screen=True) as live:
             while True:
                 data = _fetch(ex)
-                live.update(Text.assemble(*render_rich(console, *data)))
+                live.update(render_rich(console, *data))
                 time.sleep(refresh)
     else:
         while True:
