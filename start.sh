@@ -11,8 +11,8 @@ MIN_CONFIDENCE="${COPY_TRADE_MIN_CONFIDENCE:-0.65}"
 OKX_MAX_WALLETS="${COPY_TRADE_OKX_MAX_WALLETS:-100}"
 MAX_POSITIONS="${COPY_TRADE_MAX_POSITIONS:-5}"
 
-echo "Starting health server..."
-python health_server.py &
+echo "Starting dashboard..."
+python web_dashboard.py &
 
 echo "Starting copy trade bot (LIVE Futures testnet)..."
 echo "Interval=${INTERVAL}m Collect=${COLLECT_INTERVAL}s Size=\$${POSITION_SIZE_USD} Confidence=${MIN_CONFIDENCE} Wallets=${OKX_MAX_WALLETS} MaxPos=${MAX_POSITIONS}"
