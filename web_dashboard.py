@@ -70,6 +70,7 @@ HTML = """<!DOCTYPE html>
 <html><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="refresh" content="10">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
 <title>Copy Trade</title>
 <style>
 *{{margin:0;padding:0;box-sizing:border-box}}
