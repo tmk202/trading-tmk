@@ -472,14 +472,15 @@ class BinanceCopyExecutor(CopyTradeExecutor):
                 data = self.exchange._signed("GET", "/fapi/v2/positionRisk", {"symbol": self.exchange._symbol(sym)})
                 if data and isinstance(data, list) and len(data) > 0:
                     amt = abs(float(data[0].get("positionAmt", 0)))
-                    if amt > 0:
-                        side = "buy" if float(data[0].get("positionAmt", 0)) > 0 else "sell"
-                        self.active_positions[sym] = {
-                            "side": side,
-                            "entry_price": float(data[0].get("entryPrice", 0)),
-                            "entry_time": _now_iso(),
-                        }
-                        rebuilt += 1
+                if amt > 0:
+                    side = "buy" if float(data[0].get("positionAmt", 0)) > 0 else "sell"
+                    self.active_positions[sym] = {
+                        "side": side,
+                        "entry_price": float(data[0].get("entryPrice", 0)),
+                        "entry_time": _now_iso(),
+                        "amount": amt,
+                    }
+                    rebuilt += 1
             except Exception:
                 pass
         if removed or rebuilt:
@@ -719,7 +720,17 @@ class HyperliquidCopyExecutor(BinanceCopyExecutor):
         try:
             amount = float(pos.get("amount") or 0)
             if amount <= 0:
-                logger.warning("No tracked futures amount to close for %s", symbol)
+                # Try to fetch amount from exchange
+                try:
+                    base = symbol.split("/")[0]
+                    balance = self.exchange.fetch_balance()
+                    amount = float(balance.get(base, {}).get("free", 0))
+                    if amount <= 0:
+                        amount = abs(float(self.exchange.fetch_position(symbol)))
+                except Exception:
+                    pass
+            if amount <= 0:
+                logger.warning("No tracked futures amount to close for %s, removing from tracker", symbol)
                 self.active_positions.pop(symbol, None)
                 return False
             order = self.exchange.create_market_order(close_side, amount, symbol, reduce_only=True)

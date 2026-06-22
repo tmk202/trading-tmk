@@ -366,12 +366,18 @@ class CopyTradeBot:
             self.stats["hyperliquid_trades"] = len(ex.active_positions)
 
             for pos in ex.active_positions.values():
-                sig = pos["signal"]
-                logger.info(
-                    "[5/5] Hyperliquid ACTIVE %s %s $%.0f (%.0f%% conf, trader=%s)",
-                    sig.side.upper(), sig.symbol, sig.size_usd,
-                    sig.confidence * 100, sig.source_symbol,
-                )
+                sig = pos.get("signal")
+                if sig and isinstance(sig, TradeSignal):
+                    logger.info(
+                        "[5/5] Hyperliquid ACTIVE %s %s $%.0f (%.0f%% conf, trader=%s)",
+                        sig.side.upper(), sig.symbol, sig.size_usd,
+                        sig.confidence * 100, sig.source_symbol,
+                    )
+                else:
+                    logger.info(
+                        "[5/5] Hyperliquid ACTIVE (synced) %s %s",
+                        pos.get("side", "?"), list(pos.keys())[0] if pos else "?",
+                    )
             logger.info("[5/5] Hyperliquid: %d new signals, %d active positions", len(signals), len(ex.active_positions))
         except Exception as exc:
             logger.warning("[5/5] Hyperliquid execution error: %s", exc)
